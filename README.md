@@ -96,11 +96,21 @@ change.
 
 ## Deployment
 
-Hosted on Vercel as the project `cartcompare`, linked to `YungChuckTaylor/cartcompare`.
+**Live: https://cartcompare-seven.vercel.app**
 
-- Static site: `public/` (`outputDirectory` in `vercel.json`)
+Hosted on Vercel as the project `cartcompare` (team *Lucro*), linked to
+`YungChuckTaylor/cartcompare`. Production builds come from
+`arena/abebc7f2-cartcompare`; `cartcompare.vercel.app` was already taken, so Vercel
+assigned `cartcompare-seven.vercel.app`.
+
+- Static site: `public/`
 - API: `api/[...path].js` → `src/api.js`
 - Node: 22.x, function `maxDuration` 30s
+- Build config lives in `vercel.json` as explicit `builds` + `routes`. This is
+  deliberate: with zero-config, Vercel's Node.js preset treated the whole repo as a
+  single app and used `public/app.js` as the root lambda entrypoint, so every route
+  including `/` returned `FUNCTION_INVOCATION_FAILED`. The explicit config keeps
+  `public/` static and gives `api/[...path].js` its own function.
 - Environment: add `DATAFINITI_API_KEY` in project settings to switch to live mode. With no key the
   deployment serves the demo catalogue, which is the intended default for a public link.
 
