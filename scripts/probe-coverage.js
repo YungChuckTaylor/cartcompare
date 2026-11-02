@@ -146,7 +146,24 @@ function printResults(results) {
 }
 
 function verdict(results) {
-  const by = Object.fromEntries(results.map((r) => [r.id, r]));
+  const answered = results.filter((r) => r.ok);
+  const failed = results.filter((r) => !r.ok);
+
+  // A failed request is not a zero. Conflating the two is how a network or auth
+  // problem gets misread as "the vendor has no data".
+  if (!answered.length) {
+    return [
+      '',
+      'VERDICT',
+      '-------',
+      'INCONCLUSIVE — every probe failed before returning data.',
+      'That is an auth, quota or network problem, not a coverage finding.',
+      'Nothing was measured and nothing should be concluded from this run.',
+      `First error: ${failed[0]?.error ?? 'unknown'}`,
+    ].join('\n');
+  }
+
+  const by = Object.fromEntries(answered.map((r) => [r.id, r]));
   const usd = by['usd-prices']?.numFound ?? 0;
   const grocery = by['us-grocery-priced']?.numFound ?? 0;
   const electronics = by['us-electronics']?.numFound ?? 0;
@@ -163,6 +180,10 @@ function verdict(results) {
   }
   if (electronics >= 1000) {
     lines.push(`US electronics is dense (${electronics}). This is the category to launch the cart MVP in — scraped catalogues are strongest exactly here.`);
+  }
+  if (failed.length) {
+    lines.push('');
+    lines.push(`CAUTION: ${failed.length} of ${results.length} probes errored and were excluded from this verdict.`);
   }
   lines.push('');
   lines.push('Next step: run a UPC probe on 10 of your own SKUs (--query or edit the list).');
