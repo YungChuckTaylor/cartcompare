@@ -1,8 +1,8 @@
 /* CartCompare MVP — vanilla client. No build step, no framework, on purpose. */
 
 const state = {
-  cart: new Map(), // upc -> { upc, name, brand, size, qty }
-  products: new Map(), // upc -> product from search (for display only)
+  cart: new Map(), // id -> { upc, id, name, brand, size, qty }
+  products: new Map(), // id -> product from search (for display only)
   comparison: null,
   mode: 'demo',
   busy: false,
@@ -143,11 +143,11 @@ function renderSuggestions(items) {
     btn.innerHTML = `
       <span class="t">
         <span class="n">${esc(item.name)}</span>
-        <span class="s">${esc([item.brand, item.size || item.category].filter(Boolean).join(' · ') || item.upc || '')}</span>
+        <span class="s">${esc([item.brand, item.size || item.category].filter(Boolean).join(' · ') || item.upc || 'no barcode')}</span>
       </span>
       <span class="p">${cheapest ? money(cheapest.price, cheapest.currency) : '—'}</span>`;
     btn.addEventListener('click', () => {
-      state.products.set(item.upc, item);
+      state.products.set(item.id || item.upc, item);
       addToCart(item);
       els.q.value = '';
       renderSuggestions([]);
@@ -160,12 +160,14 @@ function renderSuggestions(items) {
 
 /* ---------- cart ---------- */
 function addToCart(item) {
-  const existing = state.cart.get(item.upc);
+  const id = item.id || item.upc;
+  const existing = state.cart.get(id);
   if (existing) {
     existing.qty = Math.min(20, existing.qty + 1);
   } else {
-    state.cart.set(item.upc, {
-      upc: item.upc,
+    state.cart.set(id, {
+      upc: id,
+      id,
       name: item.name,
       brand: item.brand,
       size: item.size,
@@ -226,7 +228,7 @@ async function refresh() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        items: [...state.cart.values()].map((l) => ({ upc: l.upc, qty: l.qty, name: l.name })),
+        items: [...state.cart.values()].map((l) => ({ id: l.id || l.upc, qty: l.qty, name: l.name })),
         region: els.regionUS.checked ? 'US' : 'ANY',
       }),
     });

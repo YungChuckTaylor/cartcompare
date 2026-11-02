@@ -80,6 +80,35 @@ function toNumber(value) {
 }
 
 /**
+ * `prices[].dateSeen` comes back as an ARRAY of ISO strings (every time the
+ * listing was observed), not a single timestamp. Collapsing it to the most
+ * recent observation is what makes "how fresh is this price" answerable.
+ */
+export function latestDate(value) {
+  if (!value) return null;
+  const list = Array.isArray(value) ? value : [value];
+  let best = null;
+  for (const entry of list) {
+    const t = Date.parse(entry);
+    if (Number.isFinite(t) && (best === null || t > best)) best = t;
+  }
+  return best === null ? null : new Date(best).toISOString();
+}
+
+/**
+ * Merchant names in the wild carry UI debris: "Pharmapacks.comLearn moreStore
+ * info". Left alone, one seller becomes three and basket grouping silently
+ * breaks. This only removes obvious noise - it does NOT try to decide that
+ * "Walmart - Pharmapacks" is Walmart, because that would be a lie.
+ */
+export function cleanMerchant(name) {
+  return String(name || '')
+    .replace(/\s*learn more.*$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Datafiniti's product shape is loose: `prices` can hold several offers, each
  * with an optional `merchant`, and merchants can be a string or an array.
  * This flattens it into one offer per (product, seller) pair and refuses to
@@ -108,15 +137,15 @@ export function normalizeRecord(record) {
         ? [p.merchant]
         : [];
 
-    const sellers = names.length ? names.map(String) : [domain || null];
-    for (const seller of sellers) {
+    const sellers = names.length ? names.map(cleanMerchant).filter(Boolean) : [domain || null];
+    for (const seller of (sellers.length ? sellers : [null])) {
       const meta = seller ? merchantMeta.get(seller.toLowerCase()) || {} : {};
       offers.push({
         merchant: seller || 'Unlisted seller',
         domain: domain || (meta.website ? safeHost(meta.website) : null),
         price: amount,
         currency: (p.currency || 'USD').toUpperCase(),
-        dateSeen: p.dateSeen || record.mostRecentPriceUpdate || null,
+        dateSeen: latestDate(p.dateSeen) || latestDate(record.mostRecentPriceUpdate),
         isSale: Boolean(p.isSale),
         availability: p.availability ?? null,
         country: meta.country ? String(meta.country).toUpperCase() : null,

@@ -36,6 +36,26 @@ export function filterOffers(offers, region) {
 }
 
 /**
+ * Freshness gate.
+ *
+ * Real Datafiniti records carry observations going back years: the same product
+ * can hold a 2017 eBay price and a price seen this morning. A cart comparison
+ * that averages or minimises across those is worse than no comparison, so stale
+ * offers are dropped before any maths happens. Offers with no timestamp are
+ * kept, because "unknown age" is not the same as "known stale" - they are
+ * surfaced rather than silently deleted.
+ */
+export function withinAge(offers, maxAgeDays, now = Date.now()) {
+  const days = Number(maxAgeDays);
+  if (!Number.isFinite(days) || days <= 0) return offers;
+  const cutoff = now - days * 86_400_000;
+  return offers.filter((offer) => {
+    const t = offer.dateSeen ? Date.parse(offer.dateSeen) : NaN;
+    return !Number.isFinite(t) || t >= cutoff;
+  });
+}
+
+/**
  * Cheapest offer per merchant for a single product. A merchant can appear
  * several times in a record (multiple listings, sale + regular); the basket
  * total should use the price a shopper could actually get.

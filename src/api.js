@@ -4,6 +4,7 @@ import { loadEnv, num } from './env.js';
 import { createPriceService } from './prices.js';
 import {
   filterOffers,
+  withinAge,
   cheapestPerMerchant,
   merchantBaskets,
   summary,
@@ -58,7 +59,7 @@ function warningsFor(mode, items, region) {
 async function buildComparison(prices, body) {
   const requested = Array.isArray(body?.items) ? body.items : [];
   if (!requested.length) {
-    return { status: 400, body: { error: 'Send { items: [{ upc, qty }] }' } };
+    return { status: 400, body: { error: 'Send { items: [{ id | upc, qty }] }' } };
   }
   if (requested.length > 25) {
     return { status: 400, body: { error: 'Cart is capped at 25 lines in the MVP.' } };
@@ -66,10 +67,13 @@ async function buildComparison(prices, body) {
 
   const region = normalizeRegion(body?.region);
   let spent = 0;
+  let droppedStale = 0;
   const lines = [];
 
   for (const entry of requested) {
-    const upc = String(entry.upc || '').trim();
+    // `id` is a barcode or `name:<product name>`, because real Datafiniti records
+    // frequently have no barcode at all.
+    const upc = String(entry.id || entry.upc || '').trim();
     if (!upc) continue;
     const qty = Math.min(20, Math.max(1, Number(entry.qty) || 1));
 
@@ -84,7 +88,9 @@ async function buildComparison(prices, body) {
       offers: [],
       source: prices.mode(),
     };
-    const offers = filterOffers(base.offers || [], region);
+    const regional = filterOffers(base.offers || [], region);
+    const offers = withinAge(regional, prices.offerMaxAgeDays);
+    droppedStale += regional.length - offers.length;
 
     lines.push({
       upc,
@@ -94,6 +100,7 @@ async function buildComparison(prices, body) {
       qty,
       source: base.source,
       offers,
+      offersDroppedStale: regional.length - offers.length,
       cheapest: cheapestPerMerchant(offers)[0] || null,
     });
   }
@@ -109,6 +116,7 @@ async function buildComparison(prices, body) {
       region,
       generatedAt: new Date().toISOString(),
       credits: { thisRequest: spent, ...prices.credits() },
+      freshness: { maxAgeDays: prices.offerMaxAgeDays, offersDroppedStale: droppedStale },
       warnings: warningsFor(mode, lines, region),
       items: lines,
       baskets,

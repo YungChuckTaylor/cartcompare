@@ -39,11 +39,19 @@ const EXTRA_QUERY = flag('query');
  * Probes are ordered cheapest-signal-first. Each one is a question whose
  * answer changes a decision.
  */
+/**
+ * Field note (measured against the live API on 2026-11-02): the bare `country`
+ * field matches nothing on product records - `country:US` returns num_found 0
+ * and costs nothing. The populated field is `merchants.country`, which matches
+ * ~46M records. A probe built on `country:US` would have "proved" zero US
+ * coverage, which is exactly the kind of wrong answer this script exists to
+ * avoid.
+ */
 const DEFAULT_PROBES = [
   {
     id: 'any-us',
     question: 'Does the product database hold US-sourced records?',
-    query: 'country:US',
+    query: 'merchants.country:US',
     decides: 'The baseline. Datafiniti is US-first, so this should be large.',
   },
   {
@@ -55,43 +63,43 @@ const DEFAULT_PROBES = [
   {
     id: 'us-grocery',
     question: 'Is there US grocery at all?',
-    query: 'country:US AND categories:"Grocery"',
+    query: 'merchants.country:US AND categories:"Grocery"',
     decides: 'The category your cart wants. Everything below refines this.',
   },
   {
     id: 'fresh',
     question: 'How fresh are US records? (last 30 days)',
-    query: 'country:US AND prices.dateSeen:[2026-10-03 TO 2026-11-02]',
+    query: 'merchants.country:US AND prices.dateSeen:[2026-10-03 TO 2026-11-02]',
     decides: 'Stale scraper output cannot answer "what does this cost today".',
   },
   {
     id: 'us-grocery-priced',
     question: 'US grocery WITH a USD price — the real intersection?',
-    query: 'country:US AND prices.currency:USD AND categories:"Grocery"',
+    query: 'merchants.country:US AND prices.currency:USD AND categories:"Grocery"',
     decides: 'This is the number that decides whether Datafiniti can seed a US cart MVP.',
   },
   {
     id: 'us-household',
     question: 'US household / general merchandise?',
-    query: 'country:US AND categories:"Household"',
+    query: 'merchants.country:US AND categories:"Household"',
     decides: 'Household is the other half of a typical grocery cart.',
   },
   {
     id: 'us-banners',
     question: 'Are the big US banners even in the merchant list?',
-    query: 'country:US AND (merchants.name:"Walmart" OR merchants.name:"Target" OR merchants.name:"Kroger")',
+    query: 'merchants.country:US AND (merchants.name:"Walmart" OR merchants.name:"Target" OR merchants.name:"Kroger")',
     decides: 'A cart comparison is worthless if the merchant column is empty.',
   },
   {
     id: 'us-multi-merchant',
     question: 'Do records carry MORE THAN ONE merchant with a price?',
-    query: 'country:US AND prices.currency:USD AND prices.amountMin:[1 TO 500]',
+    query: 'merchants.country:US AND prices.currency:USD AND prices.amountMin:[1 TO 500]',
     decides: 'Basket comparison needs the same UPC at several stores, not one listing.',
   },
   {
     id: 'us-electronics',
     question: 'Is the US electronics slice dense?',
-    query: 'country:US AND categories:"Electronics"',
+    query: 'merchants.country:US AND categories:"Electronics"',
     decides: 'Electronics is where scraped catalogues are strongest — a viable fallback category.',
   },
 ];

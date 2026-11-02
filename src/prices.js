@@ -21,6 +21,11 @@ const DEFAULT_DATA_DIR = path.resolve(
   'data',
 );
 
+/** A cart line needs a stable id; barcode when we have one, name when we do not. */
+export function withId(product) {
+  return { ...product, id: product.upc || `name:${product.name}` };
+}
+
 export function createPriceService({ cacheTtlMs = 24 * 3600 * 1000, dataDir = null } = {}) {
   const store = new Store(path.join(dataDir || process.env.DATA_DIR || DEFAULT_DATA_DIR, 'cache-root'));
   const demo = createDemoProvider();
@@ -28,6 +33,11 @@ export function createPriceService({ cacheTtlMs = 24 * 3600 * 1000, dataDir = nu
   function mode() {
     return datafiniti.hasCredentials() ? 'live' : 'demo';
   }
+
+  // How old an offer may be before it is refused. Datafiniti keeps price
+  // observations for years, so without this a 2017 marketplace price can win a
+  // 2026 comparison. 0 disables the gate.
+  const offerMaxAgeDays = Number(process.env.OFFER_MAX_AGE_DAYS ?? 180);
 
   function credits() {
     return {
@@ -70,7 +80,7 @@ export function createPriceService({ cacheTtlMs = 24 * 3600 * 1000, dataDir = nu
         mode: 'demo',
         cached: false,
         credits: 0,
-        items: demo.search(query).map(demo.asProduct),
+        items: demo.search(query).map(demo.asProduct).map(withId),
       };
     }
 
@@ -87,7 +97,7 @@ export function createPriceService({ cacheTtlMs = 24 * 3600 * 1000, dataDir = nu
       return {
         credits: res.credits,
         numFound: res.numFound,
-        items: res.records.map(datafiniti.normalizeRecord),
+        items: res.records.map(datafiniti.normalizeRecord).map(withId),
       };
     });
 
@@ -100,20 +110,33 @@ export function createPriceService({ cacheTtlMs = 24 * 3600 * 1000, dataDir = nu
     };
   }
 
-  /** Barcode lookup for one cart line. */
+  /**
+   * Lookup for one cart line.
+   *
+   * Not every Datafiniti record has a barcode - apparel, marketplace listings and
+   * plenty of grocery rows come back with `upc: null`. A cart that only accepts
+   * barcodes would therefore reject real products, so a line id is either a
+   * barcode or `name:<product name>` as a fallback identity.
+   */
   async function lookupUpc(upc, { name = null } = {}) {
+    const id = String(upc || '');
+    const isName = id.startsWith('name:');
+
     if (mode() === 'demo') {
-      const item = demo.byUpc(upc);
+      const item = demo.byUpc(id);
       return { product: item ? demo.asProduct(item) : null, credits: 0, cached: false };
     }
 
-    const key = Store.hashKey(['upc', upc, datafiniti.config().maxRecords]);
+    const key = Store.hashKey(['lookup', id, datafiniti.config().maxRecords]);
     const result = await cached(key, async () => {
       assertBudget(datafiniti.config().maxRecords);
-      const res = await datafiniti.search(datafiniti.buildUpcQuery(upc), {
+      const query = isName
+        ? datafiniti.buildNameQuery(name || id.slice(5))
+        : datafiniti.buildUpcQuery(id);
+      const res = await datafiniti.search(query, {
         numRecords: datafiniti.config().maxRecords,
       });
-      store.recordSpend({ purpose: `upc: ${upc}`, credits: res.credits });
+      store.recordSpend({ purpose: `${isName ? 'name' : 'upc'}: ${id.slice(0, 60)}`, credits: res.credits });
 
       if (!res.records.length && name && process.env.FALLBACK_NAME_QUERY === 'true') {
         const fallback = await datafiniti.search(datafiniti.buildNameQuery(name), { numRecords: 1 });
@@ -121,14 +144,14 @@ export function createPriceService({ cacheTtlMs = 24 * 3600 * 1000, dataDir = nu
         return {
           credits: res.credits + fallback.credits,
           numFound: fallback.numFound,
-          items: fallback.records.map(datafiniti.normalizeRecord),
+          items: fallback.records.map(datafiniti.normalizeRecord).map(withId),
         };
       }
 
       return {
         credits: res.credits,
         numFound: res.numFound,
-        items: res.records.map(datafiniti.normalizeRecord),
+        items: res.records.map(datafiniti.normalizeRecord).map(withId),
       };
     });
 
@@ -136,7 +159,7 @@ export function createPriceService({ cacheTtlMs = 24 * 3600 * 1000, dataDir = nu
     return { product, credits: result.credits, cached: result.cached };
   }
 
-  return { mode, credits, search, lookupUpc, demoCatalog: demo.catalog };
+  return { mode, credits, search, lookupUpc, offerMaxAgeDays, demoCatalog: demo.catalog };
 }
 
 /**
