@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CartCompare — cart-level price comparison MVP</title>
+<link rel="stylesheet" href="/styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230f1620'/><text x='16' y='22' font-size='15' font-family='system-ui' font-weight='700' fill='%23fff' text-anchor='middle'>C</text></svg>">
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <span class="mark">CC</span>
+      <span class="name">CartCompare</span>
+      <span class="chip">MVP</span>
+    </div>
+    <div class="meta">
+      <span class="pill" id="mode-pill">checking…</span>
+      <span class="credits" id="credits" title="Datafiniti credits spent by this app">0 / 250 credits</span>
+    </div>
+  </div>
+</header>
+
+<div class="banners" id="banners"></div>
+
+<main class="shell">
+
+  <aside class="panel build">
+    <h2><span class="num">1</span> Build a cart</h2>
+    <p class="hint">Add a few lines. The comparison updates on every change.</p>
+
+    <div class="search">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>
+      <input id="q" type="search" autocomplete="off" spellcheck="false"
+             placeholder="Search — milk, tide, cheerios, anker…">
+    </div>
+    <ul class="suggestions" id="suggestions"></ul>
+
+    <div class="cart-head">
+      <h2><span class="num">2</span> Cart</h2>
+      <span class="count" id="cart-count">0 items</span>
+    </div>
+    <ul class="cart" id="cart"></ul>
+    <p class="empty" id="cart-empty">Nothing in the cart yet. Pick something above.</p>
+
+    <div class="options">
+      <label class="opt">
+        <input type="checkbox" id="ca-only" checked>
+        <span>Canadian offers only</span>
+      </label>
+      <label class="opt">
+        <input type="checkbox" id="strict">
+        <span>Only stores carrying the whole cart</span>
+      </label>
+      <button class="ghost" id="clear">Clear cart</button>
+    </div>
+  </aside>
+
+  <section class="panel results">
+    <h2><span class="num">3</span> Compare baskets</h2>
+
+    <div class="summary" id="summary"></div>
+    <div class="baskets" id="baskets"></div>
+
+    <div class="matrix-head">
+      <h3>Item by item</h3>
+      <p class="hint" id="matrix-hint">Cheapest price in each row is highlighted.</p>
+    </div>
+    <div class="tw"><table class="matrix" id="matrix"></table></div>
+
+    <footer class="prov">
+      <span>Source of prices</span>
+      <code id="provider">—</code>
+    </footer>
+  </section>
+
+</main>
+
+<script src="/app.js" type="module"></script>
+</body>
+</html>

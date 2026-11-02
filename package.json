@@ -1,0 +1,17 @@
+{
+  "name": "cartcompare",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Minimal cart-comparison MVP. Datafiniti is one swappable price adapter, not a dependency.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node src/server.js",
+    "start": "node src/server.js",
+    "probe": "node scripts/probe-coverage.js",
+    "probe:dry": "node scripts/probe-coverage.js --dry-run",
+    "test": "node --test"
+  }
+}

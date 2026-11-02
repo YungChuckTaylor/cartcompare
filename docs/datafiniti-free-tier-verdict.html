@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Can the Datafiniti free tier carry a cart-compare MVP?</title>
+<style>
+:root{--ink:#12181f;--mid:#4a5563;--soft:#7c8794;--line:#dfe4ea;--bg:#f6f7f9;
+--green:#0f7b4f;--red:#b3261e;--amber:#a1690b;--blue:#0b6b8f;--violet:#5b3fa8;--dark:#0f1620}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:16px/1.62 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+header.top{background:var(--dark);color:#fff;padding:52px 20px 40px}
+header.top .in{max-width:900px;margin:0 auto}
+.eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#8fa4bb;font-weight:700;margin:0 0 14px}
+h1{font-size:37px;line-height:1.12;margin:0 0 16px;letter-spacing:-.025em;font-weight:800}
+.lede{font-size:17px;line-height:1.6;color:#c3ced9;margin:0;max-width:72ch}
+.answer{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:28px}
+.a-card{border-radius:10px;padding:15px 17px;border:1px solid}
+.a-card.yes{background:#0f2a20;border-color:#1c4a35}
+.a-card.no{background:#2a1614;border-color:#5a2620}
+.a-card b{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
+.a-card.yes b{color:#6ee7a8}
+.a-card.no b{color:#f2a49c}
+.a-card span{font-size:14.5px;line-height:1.5;color:#d7e0e8}
+.wrap{max-width:900px;margin:0 auto;padding:0 20px 90px}
+section{padding-top:44px;scroll-margin-top:20px}
+h2{font-size:25px;letter-spacing:-.015em;margin:0 0 10px;line-height:1.25}
+h2 .num{display:inline-block;width:28px;height:28px;border-radius:7px;background:var(--dark);color:#fff;
+font-size:13px;font-weight:800;text-align:center;line-height:28px;margin-right:10px;vertical-align:3px}
+.sub{color:var(--mid);margin:0 0 20px;max-width:74ch;font-size:15.5px}
+h3{font-size:17px;margin:28px 0 8px;letter-spacing:-.01em}
+p{margin:0 0 14px}
+ul,ol{margin:0 0 16px;padding-left:22px}
+li{margin-bottom:8px}
+li:last-child{margin-bottom:0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;background:#eef1f5;
+padding:1.5px 5px;border-radius:3px;color:#1b3a52}
+.pull{border-left:4px solid var(--dark);background:#fff;padding:16px 20px;border-radius:0 8px 8px 0;margin:22px 0;
+font-size:17px;line-height:1.55;font-weight:500}
+.callout{border-radius:8px;padding:15px 18px;margin:18px 0;font-size:14.5px;line-height:1.58;border:1px solid}
+.callout .ct{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;margin-bottom:6px}
+.warn{background:#fffbfa;border-color:#f3d4d0;color:#6b2a22}.warn .ct{color:var(--red)}
+.info{background:#f8fbfd;border-color:#d3e5ee;color:#1d4459}.info .ct{color:var(--blue)}
+.good{background:#f8fdfa;border-color:#cfe9da;color:#1c4a35}.good .ct{color:var(--green)}
+.note{background:#fdfaf3;border-color:#ecdfc4;color:#5a4a20}.note .ct{color:var(--amber)}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin:16px 0;
+box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.card h4{margin:0 0 6px;font-size:15px}
+.card p{font-size:14px;line-height:1.55;color:var(--mid);margin:0}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;background:#fff;font-size:13.5px;margin:16px 0;
+border:1px solid var(--line);border-radius:8px;overflow:hidden}
+th{background:#eef1f5;text-align:left;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+color:var(--mid);padding:10px 12px;font-weight:800;border-bottom:1px solid var(--line)}
+td{padding:10px 12px;border-bottom:1px solid #eef1f5;vertical-align:top;line-height:1.5}
+tr:last-child td{border-bottom:0}
+td.n{white-space:nowrap;font-variant-numeric:tabular-nums}
+.tg{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:2px 7px;border-radius:4px;white-space:nowrap}
+.tg.g{background:#e7f6ee;color:#0f7b4f}.tg.r{background:#fdeceb;color:#b3261e}
+.tg.a{background:#fdf3e0;color:#8a5906}.tg.b{background:#e6f4f9;color:#0b6b8f}
+.tg.k{background:#eef1f5;color:#5a6672}
+pre{background:#101820;color:#dbe4ec;padding:15px 18px;border-radius:8px;overflow-x:auto;
+font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.65;margin:16px 0}
+pre .cm{color:#6d8296}pre .kw{color:#7fd1a8}pre .st{color:#e0c07a}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.rank{list-style:none;padding:0;margin:16px 0;counter-reset:r}
+.rank li{counter-increment:r;position:relative;padding:13px 16px 13px 50px;background:#fff;
+border:1px solid var(--line);border-radius:8px;margin-bottom:9px;font-size:14.5px;line-height:1.5}
+.rank li::before{content:counter(r);position:absolute;left:14px;top:13px;width:23px;height:23px;
+border-radius:50%;background:var(--dark);color:#fff;font-size:12px;font-weight:800;
+display:flex;align-items:center;justify-content:center}
+.rank li b{display:block;margin-bottom:2px}
+.rank li span{color:var(--mid);font-size:13.5px}
+footer.end{margin-top:60px;padding-top:24px;border-top:1px solid var(--line);font-size:13px;color:var(--mid)}
+@media(max-width:760px){h1{font-size:27px}.answer{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="in">
+  <p class="eyebrow">Feasibility check &middot; Datafiniti Product Data trial &middot; verified 2 November 2026</p>
+  <h1>Can the Datafiniti free tier carry a cart-compare MVP?</h1>
+  <p class="lede">Short answer: you can absolutely build the MVP on it this week, and I have. You cannot
+  launch a Canadian cart comparison on it — and the reason is not the price.</p>
+  <div class="answer">
+    <div class="a-card yes"><b>Yes, buildable</b><span>A working cart-compare UI, basket maths and a
+    swappable Datafiniti adapter already run in this repo, at $0.</span></div>
+    <div class="a-card no"><b>No, not shippable</b><span>It is a 14-day trial, not a free tier. Canadian
+    grocery coverage is close to zero. The licence blocks republishing prices.</span></div>
+  </div>
+</div></header>
+
+<div class="wrap">
+
+<!-- 1 -->
+<section id="trial">
+<h2><span class="num">1</span>It is not a free tier. It is a 14-day trial of 1,000 records.</h2>
+<p class="sub">This is the single most important correction to make, because "free tier" implies a floor
+you can run on forever. There isn't one.</p>
+
+<p>The published product-data card reads <strong>“Trial — 1k free product records, free for 2 weeks.”</strong>
+After 14 days the trial ends and the cheapest paid tier is $99/month. That is not a free tier with limits;
+that is a demo allowance with an expiry date.</p>
+
+<div class="tw"><table>
+<thead><tr><th>Tier</th><th>Records</th><th>Price</th><th>Per record</th><th>What it's for</th></tr></thead>
+<tbody>
+<tr><td><strong>Trial</strong></td><td class="n">1,000</td><td class="n">$0</td><td class="n">—</td><td><span class="tg a">2 weeks only</span></td></tr>
+<tr><td>5K</td><td class="n">5,000/mo</td><td class="n">$99/mo</td><td class="n">$0.020</td><td>The only tier a solo MVP can justify</td></tr>
+<tr><td>20K</td><td class="n">20,000/mo</td><td class="n">$259/mo</td><td class="n">$0.013</td><td>Real catalogue, real bill</td></tr>
+<tr><td>200K</td><td class="n">200,000/mo</td><td class="n">$999/mo</td><td class="n">$0.005</td><td>Not an MVP line item</td></tr>
+<tr><td>Unlimited</td><td class="n">—</td><td class="n">$60,000/yr</td><td class="n">—</td><td>Irrelevant at your stage</td></tr>
+</tbody></table></div>
+
+<h3>The billing unit is the record, not the request</h3>
+<p>Every call returns <code>num_found</code> (free) and <code>total_cost</code> (what you spent). A returned
+record is one credit. <code>num_records</code> is capped at 10 for a normal search. So the arithmetic that
+matters:</p>
+
+<div class="pull"><b>1,000 records ÷ 10 records per barcode lookup = 100 lookups.</b> One 12-line cart, tested
+eight times, and the trial is gone.</div>
+
+<p>You can stretch it — ask for one record instead of ten, cache aggressively, and never re-query the same
+barcode — but you cannot stretch 1,000 records into a product that strangers use.</p>
+
+<div class="callout info"><span class="ct">The one trick worth knowing</span>
+<strong><code>num_found</code> is free.</strong> You can ask "how many records do you have for this query?"
+for the price of a single returned record. That turns the trial from a data allowance into a
+<em>coverage measurement instrument</em> — which is the best possible use of it. Section 4 is exactly that,
+and it costs about 8 credits.</div>
+</section>
+
+<!-- 2 -->
+<section id="coverage">
+<h2><span class="num">2</span>Coverage is US-first, and grocery is the weak spot</h2>
+<p class="sub">Even if the trial were unlimited, this is the wall you hit. Datafiniti's own product page
+says so plainly.</p>
+
+<div class="card" style="border-left:4px solid var(--red)">
+<h4>Their words, not mine</h4>
+<p>"Coverage primarily focuses on the U.S. Some international data may appear, but is not guaranteed at
+scale." Your own provider census already reached the same conclusion: 70,000+ merchants including Canadian
+storefronts, "though Canadian depth is a fraction of US depth."</p>
+</div>
+
+<p>There is a second problem underneath the geography, and it is the one that kills a <em>cart</em> product
+specifically. Datafiniti builds its product database by crawling e-commerce product listing pages. That
+means:</p>
+
+<ul>
+<li><strong>No shelf prices.</strong> What you get is what a web page displayed, not what the tag under the
+product said.</li>
+<li><strong>No flyer or promo context.</strong> There is an <code>isSale</code> flag, but not the regular-vs-promo
+pair that makes "is this a deal?" answerable.</li>
+<li><strong>The Canadian grocery banners are the hardest to crawl</strong> and the least likely to be in the
+index. No Frills, Food Basics, FreshCo, Metro and Sobeys all sit behind bot protection, Instacart, or Voilà
+storefronts.</li>
+<li><strong>A cart is a basket, not a product.</strong> Comparing baskets requires the <em>same</em> UPC at
+<em>five</em> merchants. Any per-product coverage number you measure gets raised to the power of your cart
+size. 60% per-item coverage over an 8-line cart is 1.7% of carts fully comparable.</li>
+</ul>
+
+<div class="pull">The realistic Canadian picture: Datafiniti will give you <b>Walmart.ca, Amazon.ca and Best
+Buy Canada</b>-shaped general merchandise. It will not give you a grocery basket across five banners. That is
+an electronics-shopping product, not a cart compare.</div>
+</section>
+
+<!-- 3 -->
+<section id="licence">
+<h2><span class="num">3</span>The licence clause is the quiet blocker</h2>
+<p class="sub">If your product is essentially republishing prices, this is the clause your business depends on.</p>
+
+<div class="tw"><table>
+<thead><tr><th>Clause</th><th>What it says</th><th>Why it matters to you</th></tr></thead>
+<tbody>
+<tr><td><strong>§3</strong></td><td>May not resell or sublicense the data "without significant modifications"</td>
+<td><span class="tg r">Undefined test</span> Showing a price next to a merchant name is arguably <em>not</em> a
+significant modification. Get your specific use in writing before you pay.</td></tr>
+<tr><td><strong>§6</strong></td><td>On termination, delete all Datafiniti data and certify it</td>
+<td><span class="tg a">Dependency</span> Your catalogue disappears with the subscription. Not an asset you own.</td></tr>
+<tr><td><strong>§7</strong></td><td>May suspend or throttle services at its sole discretion</td>
+<td><span class="tg a">Availability risk</span> A price app that can be throttled at will is not infrastructure.</td></tr>
+<tr><td><strong>§5</strong></td><td>Price list may change at any time, no refund for prior charges</td>
+<td><span class="tg k">Normal</span> Budget for it, don't build a unit-economics story on a fixed rate.</td></tr>
+</tbody></table></div>
+
+<p>None of this is fatal for a prototype. All of it is fatal for "Datafiniti is my price layer."</p>
+</section>
+
+<!-- 4 -->
+<section id="probe">
+<h2><span class="num">4</span>Spend 8 credits, not 1,000, to get the real answer</h2>
+<p class="sub">I built the measurement so you don't have to guess. This is the decision gate that should
+happen before you ever enter a card.</p>
+
+<pre><span class="cm"># see exactly what will be asked, spend nothing</span>
+npm run probe:dry
+
+<span class="cm"># run 8 probes against the live API: ~8 credits, ~15 seconds</span>
+npm run probe</pre>
+
+<p>It asks eight questions, one record each, and prints <code>num_found</code> for every one. The sixth and
+seventh are the ones that decide your product:</p>
+
+<div class="tw"><table>
+<thead><tr><th>Result</th><th>What it means</th><th>What to do</th></tr></thead>
+<tbody>
+<tr><td class="n"><strong>0</strong> CAD-priced records</td><td>No Canadian price data exists at all</td>
+<td><span class="tg r">Stop</span> Datafiniti cannot serve this product. Do not pay.</td></tr>
+<tr><td class="n"><strong>0</strong> Canadian grocery</td><td>The category you want is absent, whatever the marketing implies</td>
+<td><span class="tg r">Pivot the category</span> If Canadian electronics returns &gt;100 records, build <em>that</em>.</td></tr>
+<tr><td class="n"><strong>1–500</strong> grocery</td><td>Thin. Enough for a demo, not for coverage</td>
+<td><span class="tg a">Treat as a US reference layer</span> Not your price source.</td></tr>
+<tr><td class="n"><strong>&gt;500</strong> grocery</td><td>Genuinely surprising — check freshness and merchant spread before believing it</td>
+<td><span class="tg g">Worth $99</span> Run one month, measure per-item match rate against your own data.</td></tr>
+</tbody></table></div>
+
+<div class="callout warn"><span class="ct">Prediction, so you can hold me to it</span>
+Probes 1 and 2 will return a number. Probes 3 and 5 will return <strong>zero or near-zero</strong>. Probe 6
+(electronics) will return something. If that is what happens, Datafiniti is a US electronics catalogue
+available to a Canadian founder — useful for a cross-border price product, useless for a grocery cart.</div>
+</section>
+
+<!-- 5 -->
+<section id="built">
+<h2><span class="num">5</span>What I built instead: the MVP, with Datafiniti as one adapter</h2>
+<p class="sub">The point of the architecture is that today's answer being "no" doesn't cost you the work.</p>
+
+<p>The repo now runs a complete cart comparison at <code>http://localhost:4173</code>. It works with no API
+key at all, because the data layer is behind an interface and the demo provider is not a mock — it is a real
+provider that returns the same shape Datafiniti does.</p>
+
+<div class="tw"><table>
+<thead><tr><th>File</th><th>What it does</th><th>Why it's shaped that way</th></tr></thead>
+<tbody>
+<tr><td><code>src/datafiniti.js</code></td><td>Datafiniti v4 client, query builder, record normaliser</td>
+<td>The only file that knows Datafiniti exists</td></tr>
+<tr><td><code>src/demo.js</code></td><td>Synthetic catalogue provider</td>
+<td>Lets the product be built and demoed at $0</td></tr>
+<tr><td><code>src/prices.js</code></td><td>Provider choice, cache, credit budget</td>
+<td>Swap the price source here, nothing else moves</td></tr>
+<tr><td><code>src/compare.js</code></td><td>Basket maths: cheapest per merchant, totals, coverage</td>
+<td>Pure functions, unit tested, provider-agnostic</td></tr>
+<tr><td><code>scripts/probe-coverage.js</code></td><td>The 8-credit coverage measurement</td>
+<td>Turn the trial into evidence instead of data</td></tr>
+<tr><td><code>public/</code></td><td>Cart builder, basket cards, item-by-item matrix</td>
+<td>No build step, no framework, no npm install</td></tr>
+</tbody></table></div>
+
+<h3>Two product decisions the MVP takes seriously</h3>
+<ol>
+<li><strong>A partial basket is never presented as a cheap basket.</strong> A store that carries 2 of your 5
+lines will show a lower total than a store that carries all 5. The UI badges coverage on every card and offers
+a "only stores carrying the whole cart" filter. This is the mistake every comparison app makes, and it is the
+fastest way to lose a user's trust.</li>
+<li><strong>Region is a first-class filter, not a setting.</strong> "Canadian offers only" is on by default,
+and offers with no Canadian evidence are visibly separated rather than silently mixed in — so the coverage gap
+is the first thing you see, not the last thing you discover.</li>
+</ol>
+
+<div class="callout good"><span class="ct">Why this matters for your budget</span>
+Every hour spent on the cart UI, the basket maths, the coverage-honest ranking and the empty states is
+<strong>permanently reusable</strong>, no matter which provider wins. The provider integration is roughly 200
+lines. Build the product, rent the data.</div>
+</section>
+
+<!-- 6 -->
+<section id="actually">
+<h2><span class="num">6</span>If the goal is a Canadian cart compare for $0, this is the stack</h2>
+<p class="sub">Ranked by what actually returns Canadian prices, which is not the same as what is cheapest to integrate.</p>
+
+<div class="tw"><table>
+<thead><tr><th>Layer</th><th>Use</th><th>Cost</th><th>Reality</th></tr></thead>
+<tbody>
+<tr><td><strong>Product identity</strong></td><td>Open Food Facts + GS1 GTIN validation</td><td class="n">$0</td>
+<td><span class="tg g">Works today</span> Barcode to product name, brand, size, image. Your matching spine.</td></tr>
+<tr><td><strong>General merchandise prices</strong></td><td>Affiliate feeds — Amazon.ca, Best Buy, Walmart via Impact/Rakuten</td><td class="n">$0 + rev share</td>
+<td><span class="tg g">Works today</span> Licensed, merchant-supplied, refreshed daily. Also pays you.</td></tr>
+<tr><td><strong>Grocery prices</strong></td><td>Your own barcode-scan loop</td><td class="n">~$0</td>
+<td><span class="tg a">The real work</span> The only route to Canadian shelf prices, per your build plan.</td></tr>
+<tr><td><strong>Electronics MSRP anchor</strong></td><td>Brand-direct feeds + Icecat</td><td class="n">$0</td>
+<td><span class="tg g">Works today</span> Makes "is this a deal?" answerable without a shelf audit.</td></tr>
+<tr><td><strong>US enrichment</strong></td><td>Datafiniti</td><td class="n">$99/mo</td>
+<td><span class="tg a">Optional, later</span> Adds US comparison and specs. Enrichment, not a price source.</td></tr>
+</tbody></table></div>
+
+<div class="pull">The honest sequencing: build the cart UI against the demo provider <b>now</b>, wire affiliate
+feeds <b>next</b> because they are free and Canadian, and put Datafiniti behind an env var for the day you
+want a US comparison column.</div>
+</section>
+
+<!-- 7 -->
+<section id="week">
+<h2><span class="num">7</span>What to do this week</h2>
+
+<ol class="rank">
+<li><b>Run the probe before anything else</b><span><code>npm run probe</code> with a trial account. Eight credits,
+fifteen seconds, and you will know more than any vendor call will tell you.</span></li>
+<li><b>Walk through the MVP with the demo data</b><span>Add five products, watch the basket cards. The question
+"does the cart comparison feel like a product?" is answerable today, for free, and it is the question that
+actually decides whether this is worth building.</span></li>
+<li><b>Pick the category from the probe, not from the plan</b><span>If Canadian electronics is covered and grocery
+is not, the MVP is an electronics comparison. That is a smaller business, but it is a real one.</span></li>
+<li><b>Get the licence clause answered in writing</b><span>Ask specifically: "may we display individual product
+prices to consumers, attributed to the merchant, with a link to the source listing?" That sentence is the whole
+business. Do not accept a salesperson's paraphrase.</span></li>
+<li><b>Do not pay $99 to find out</b><span>Pay $99 only after probe results and a demo user session both say the
+data is there. The trial exists precisely so you don't have to buy the answer.</span></li>
+</ol>
+
+<div class="callout good"><span class="ct">The version of this that is actually true</span>
+Datafiniti is a legitimate, fairly priced, well-documented product — the census was right to flag it as the most
+interesting new vendor. It is just <strong>the wrong shape for a Canadian grocery cart MVP</strong>, and the word
+"free" is doing more work in that question than the data is.</div>
+</section>
+
+<footer class="end">
+<p><strong>Sources.</strong> Datafiniti product-data pricing and the 1,000-record / 2-week trial:
+datafiniti.co/data/product-data, cross-checked against third-party pricing trackers in October 2026. Coverage
+statement ("primarily focuses on the U.S.") and the crawl-based sourcing method: datafiniti.co and
+docs.datafiniti.co/docs/how-product-records-are-sourced. API shape, the 10-record non-download cap and
+<code>num_found</code>/<code>total_cost</code> response fields: docs.datafiniti.co/reference/products. Licence clause
+references: terms of service §3, §5, §6, §7. Canadian-market framing: your own provider census, October 2026.</p>
+<p style="margin-top:12px">Pricing and terms change. Re-verify the tier card and the licence before signing
+anything, and have a lawyer read §3 rather than a founder.</p>
+</footer>
+
+</div>
+</body>
+</html>
