@@ -71,6 +71,25 @@ export function cheapestPerMerchant(offers) {
 }
 
 /**
+ * The one-product summary a search result needs: who sells it, for how much,
+ * and how wide the spread is. Pure so it can be tested without a network.
+ */
+export function merchantComparison(offers) {
+  const merchants = cheapestPerMerchant(offers || []);
+  const low = merchants[0] || null;
+  const high = merchants[merchants.length - 1] || null;
+  return {
+    merchants,
+    merchantCount: merchants.length,
+    lowPrice: low ? low.price : null,
+    lowMerchant: low ? low.merchant : null,
+    highPrice: high ? high.price : null,
+    spread: low && high ? Math.round((high.price - low.price) * 100) / 100 : null,
+    currency: low ? low.currency || 'USD' : 'USD',
+  };
+}
+
+/**
  * Turn per-item offer lists into per-merchant basket totals.
  *
  * `items` is [{ upc, name, qty, offers }]. A merchant only appears if it

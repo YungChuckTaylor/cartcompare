@@ -87,20 +87,63 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px}
 #q:focus{border-color:#9dc3d8; box-shadow:0 0 0 3px #e6f4f9; background:#fff}
 #q::placeholder{color:#a3adb9}
 
-.suggestions{list-style:none; margin:8px 0 0; padding:0; max-height:246px; overflow-y:auto}
+.suggestions{list-style:none; margin:8px 0 0; padding:0; max-height:392px; overflow-y:auto;
+  display:flex; flex-direction:column; gap:7px}
 .suggestions:empty{display:none}
 .suggestions li{margin:0}
-.sugg{
-  width:100%; text-align:left; background:none; border:1px solid transparent;
-  border-radius:8px; padding:9px 10px; cursor:pointer; font:inherit; color:inherit;
-  display:flex; gap:10px; align-items:baseline; justify-content:space-between;
+.scope{
+  font-size:11px; color:var(--soft); margin:8px 0 0; display:flex;
+  align-items:center; gap:5px;
 }
-.sugg:hover{background:#f2f5f8; border-color:var(--line)}
-.sugg .t{min-width:0}
-.sugg .n{display:block; font-size:13.5px; font-weight:600; line-height:1.3;
+.scope b{color:var(--mid); font-weight:600}
+
+/* one result = one product = one merchant price ladder */
+.res{
+  width:100%; text-align:left; background:var(--card); cursor:pointer; font:inherit;
+  color:inherit; border:1px solid var(--line); border-radius:9px; padding:10px 11px;
+  display:block; box-shadow:var(--shadow); transition:border-color .12s, box-shadow .12s;
+}
+.res:hover{border-color:#c3ccd6; box-shadow:0 2px 6px rgba(16,24,40,.07)}
+.res-h{display:flex; align-items:flex-start; gap:8px; justify-content:space-between}
+.res-n{
+  font-size:13px; font-weight:650; line-height:1.35; letter-spacing:-.005em;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+}
+.res-add{
+  flex:0 0 auto; font-size:10.5px; font-weight:700; color:var(--blue);
+  background:var(--blue-bg); border-radius:5px; padding:2px 6px; white-space:nowrap;
+}
+.res-sub{display:block; font-size:11px; color:var(--soft); margin-top:3px;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.sugg .s{display:block; font-size:11.5px; color:var(--soft); margin-top:2px}
-.sugg .p{font-size:12.5px; font-weight:700; color:var(--green); font-variant-numeric:tabular-nums; white-space:nowrap}
+
+.mks{display:flex; flex-wrap:wrap; gap:5px; margin-top:8px}
+.mk{
+  display:inline-flex; align-items:baseline; gap:5px; max-width:100%;
+  background:#f2f5f8; border:1px solid #e6ebf1; border-radius:6px;
+  padding:3px 7px; font-size:11px; font-variant-numeric:tabular-nums;
+}
+.mk em{font-style:normal; color:var(--mid); font-weight:600;
+  max-width:104px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.mk b{font-weight:750; color:var(--ink)}
+.mk.best{background:var(--green-bg); border-color:#c6e7d6}
+.mk.best em{color:var(--green)}
+.mk.best b{color:var(--green)}
+.mk.more{color:var(--soft); background:none; border-style:dashed}
+
+.res-foot{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  margin-top:8px; padding-top:7px; border-top:1px solid #eef1f5;
+  font-size:10.5px; color:var(--soft);
+}
+.res-foot b{color:var(--mid)}
+.res-foot .rng{font-variant-numeric:tabular-nums; color:var(--mid); font-weight:600}
+.res-foot .warn{color:var(--amber); font-weight:600}
+.res-foot .seen{flex:0 0 auto}
+
+.sugg-note{
+  list-style:none; font-size:10.5px; color:var(--soft); padding:8px 2px 0;
+  line-height:1.45; border-top:1px dashed var(--line); margin-top:4px;
+}
 
 /* ---------- cart ---------- */
 .cart-head{display:flex; align-items:center; justify-content:space-between; margin-top:20px;

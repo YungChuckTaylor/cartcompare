@@ -131,6 +131,13 @@ as the cart:
 2. Non-USD offers are excluded from a US comparison.
 3. A cart line with no price is shown as missing, and the basket is not ranked.
 
+Search is pinned to one category (`SEARCH_CATEGORY`, default `Grocery & Gourmet Food`) and returns a
+per-merchant price ladder rather than a single headline price: cheapest seller first, the full range,
+and an explicit "only one merchant carries this" label when there is nothing to compare. Products with
+no US merchant price are counted as `uncomparable` rather than shown as $0 or a blank row. Short
+prefixes (<3 characters) never leave the browser, and a query containing `:` is passed to Datafiniti
+raw — that is the probe path, not the shopper path.
+
 Serverless notes: the filesystem is read-only, so `src/store.js` degrades the cache and credit ledger to
 per-instance memory. The cache is an optimisation and the ledger is an estimate — neither is a source of
 truth. For production, move both to a shared store (Vercel KV or Upstash Redis).

@@ -14,6 +14,8 @@ any of these costs nothing.
 | `categories:"Grocery"` | 2,292,997 |
 | `prices.currency:USD AND categories:"Grocery"` | not run |
 | `prices.currency:USD AND prices.dateSeen:[2026-10-01 TO 2026-11-02]` | 14,893,872 |
+| `categories:"Grocery & Gourmet Food"` | 1,543,983 |
+| `categories:"Food, Beverages & Tobacco"` | **2,218** |
 | `country:US` | **0** |
 
 Two things worth knowing:
@@ -24,6 +26,11 @@ Two things worth knowing:
 - **About 3.5% of the USD pool was observed in the last month.** The rest is
   older. Prices are observations, and the corpus is a history of them, not a
   live feed.
+- **Two food taxonomies, 700x apart.** `Food, Beverages & Tobacco` is the
+  Google/Flipp category name and it does exist here, but the sampled records
+  were all one-off Shopify storefronts with zero merchant prices. Datafiniti's
+  own label, `Grocery & Gourmet Food`, is where the Walmart/Target/Kroger
+  offers live. Search pins to the latter (`SEARCH_CATEGORY` overrides it).
 
 ## Barcode lookup works, but recall is the constraint
 

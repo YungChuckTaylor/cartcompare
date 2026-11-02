@@ -6,12 +6,17 @@ import {
   filterOffers,
   withinAge,
   cheapestPerMerchant,
+  merchantComparison,
   merchantBaskets,
   summary,
   normalizeRegion,
   REGIONS,
   DEFAULT_REGION,
 } from './compare.js';
+
+function round2(n) {
+  return Math.round(n * 100) / 100;
+}
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 loadEnv(ROOT);
@@ -158,10 +163,30 @@ export async function handleRequest({ method = 'GET', pathname, query = {}, body
       .map((item) => {
         const regional = filterOffers(item.offers || [], MARKET);
         const offers = withinAge(regional, prices.offerMaxAgeDays);
-        return { ...item, offers, offersDroppedStale: regional.length - offers.length };
+        return {
+          ...item,
+          offers,
+          offersDroppedStale: regional.length - offers.length,
+          // The search result IS a price comparison between merchants, so the
+          // ladder is computed server side rather than left to the client.
+          ...merchantComparison(offers),
+        };
       })
-      .sort((a, b) => Number(b.offers.length > 0) - Number(a.offers.length > 0));
-    return { status: 200, body: { ...result, items, market: MARKET } };
+      // A product nobody sells at a US price cannot be compared, so it is not a
+      // result. Counted, though, so the emptiness is explainable.
+      .filter((item) => item.merchantCount > 0)
+      .sort((a, b) => b.merchantCount - a.merchantCount || a.lowPrice - b.lowPrice);
+
+    return {
+      status: 200,
+      body: {
+        ...result,
+        items,
+        market: MARKET,
+        category: prices.searchCategory(),
+        uncomparable: Math.max(0, (result.items || []).length - items.length),
+      },
+    };
   }
 
   if (route === '/api/catalog') {

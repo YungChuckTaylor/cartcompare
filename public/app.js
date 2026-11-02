@@ -15,6 +15,7 @@ const els = {
   banners: $('banners'),
   q: $('q'),
   suggestions: $('suggestions'),
+  scope: $('scope'),
   cart: $('cart'),
   cartCount: $('cart-count'),
   regionUS: $('region-us'),
@@ -117,11 +118,21 @@ function onSearchInput() {
 async function runSearch() {
   const q = els.q.value.trim();
   const seq = ++searchSeq;
+
+  // Every distinct query is a billable Datafiniti call on a cache miss. Typing
+  // one letter at a time would burn the trial, so short prefixes never leave
+  // the browser.
+  if (q && q.length < 3) return;
+  if (!q) {
+    renderSuggestions([]);
+    return;
+  }
+
   try {
     const result = await api(`/api/search?q=${encodeURIComponent(q)}`);
     if (seq !== searchSeq) return;
     state.mode = result.mode;
-    renderSuggestions(result.items || []);
+    renderSuggestions(result.items || [], result);
   } catch (err) {
     renderSuggestions([]);
     if (q) {
@@ -131,21 +142,69 @@ async function runSearch() {
   }
 }
 
-function renderSuggestions(items) {
+function newestDate(offers) {
+  let best = null;
+  for (const o of offers || []) {
+    const t = o.dateSeen ? Date.parse(o.dateSeen) : NaN;
+    if (Number.isFinite(t) && (best === null || t > best)) best = t;
+  }
+  return best === null ? null : new Date(best).toISOString();
+}
+
+/**
+ * One search result = one product = one price comparison between merchants.
+ * The ladder is built server side (item.merchants), so this only has to render
+ * it: cheapest merchant first, the rest behind it, and an honest label when
+ * there is only one seller and therefore nothing to compare.
+ */
+function renderSuggestions(items, meta = {}) {
   els.suggestions.innerHTML = '';
+
+  if (meta.category) {
+    els.scope.innerHTML = `Price comparison across merchants · <b>${esc(meta.category)}</b>`;
+  }
+
   for (const item of items) {
-    const prices = priceMap(item.offers);
-    const cheapest = [...prices.values()].sort((a, b) => a.price - b.price)[0];
+    const merchants = item.merchants || [];
+    const shown = merchants.slice(0, 3);
+    const rest = merchants.length - shown.length;
+    const seen = newestDate(item.offers);
+
     const li = document.createElement('li');
     const btn = document.createElement('button');
-    btn.className = 'sugg';
+    btn.className = 'res';
     btn.type = 'button';
+
+    const chips = shown
+      .map(
+        (m, idx) =>
+          `<span class="mk${idx === 0 ? ' best' : ''}">
+             <em>${esc(m.merchant)}</em>
+             <b>${money(m.price, m.currency)}</b>
+           </span>`,
+      )
+      .join('');
+
+    const more = rest > 0 ? `<span class="mk more">+${rest} more</span>` : '';
+    const one = merchants.length === 1;
+
+    const foot = one
+      ? '<span class="warn">Only one merchant carries this — nothing to compare</span>'
+      : `<span><b>${merchants.length}</b> merchants</span>
+         <span class="rng">${money(item.lowPrice, item.currency)}–${money(item.highPrice, item.currency)}</span>`;
+
     btn.innerHTML = `
-      <span class="t">
-        <span class="n">${esc(item.name)}</span>
-        <span class="s">${esc([item.brand, item.size || item.category].filter(Boolean).join(' · ') || item.upc || 'no barcode')}</span>
+      <span class="res-h">
+        <span class="res-n">${esc(item.name)}</span>
+        <span class="res-add">+ Add</span>
       </span>
-      <span class="p">${cheapest ? money(cheapest.price, cheapest.currency) : '—'}</span>`;
+      <span class="res-sub">${esc([item.brand, item.upc ? item.upc : 'no barcode'].filter(Boolean).join(' · '))}</span>
+      <span class="mks">${chips}${more}</span>
+      <span class="res-foot">
+        ${foot}
+        <span class="seen">${seen ? `seen ${shortDate(seen)}` : ''}</span>
+      </span>`;
+
     btn.addEventListener('click', () => {
       state.products.set(item.id || item.upc, item);
       addToCart(item);
@@ -153,8 +212,16 @@ function renderSuggestions(items) {
       renderSuggestions([]);
       els.q.focus();
     });
+
     li.appendChild(btn);
     els.suggestions.appendChild(li);
+  }
+
+  if (meta.uncomparable) {
+    const note = document.createElement('li');
+    note.className = 'sugg-note';
+    note.textContent = `${meta.uncomparable} more product${meta.uncomparable === 1 ? '' : 's'} matched but had no US merchant price, so there was nothing to compare.`;
+    els.suggestions.appendChild(note);
   }
 }
 

@@ -177,3 +177,29 @@ export function buildUpcQuery(upc) {
 export function buildNameQuery(name) {
   return `name:"${String(name).replace(/"/g, '').slice(0, 120)}"`;
 }
+
+/**
+ * Search is limited to one category on purpose.
+ *
+ * Measured on the live API, 2026-11-02:
+ *   categories:"Grocery & Gourmet Food"        -> 1,543,983 records
+ *   categories:"Food, Beverages & Tobacco"     ->     2,218 records
+ *
+ * The second is the Google/Flipp taxonomy name and it does exist in the corpus,
+ * but every record we sampled was a one-off Shopify storefront with no US
+ * merchant price at all - useless for comparing merchants. "Grocery & Gourmet
+ * Food" is Datafiniti's own label for the same shelf and it is the one with
+ * real Walmart/Target/Kroger offers in it.
+ *
+ * Override with SEARCH_CATEGORY if you want to widen or change it.
+ */
+export function searchCategory() {
+  return (process.env.SEARCH_CATEGORY || 'Grocery & Gourmet Food').trim();
+}
+
+/** Free text -> name phrase match, restricted to the category. */
+export function buildSearchQuery(term) {
+  const clean = String(term || '').replace(/"/g, ' ').trim().slice(0, 120);
+  if (!clean) return null;
+  return `${buildNameQuery(clean)} AND categories:"${searchCategory()}"`;
+}

@@ -87,7 +87,11 @@ export function createPriceService({ cacheTtlMs = 24 * 3600 * 1000, dataDir = nu
     const q = String(query || '').trim();
     if (!q) return { mode: 'live', cached: false, credits: 0, items: [] };
 
-    const dfQuery = q.includes(':') ? q : datafiniti.buildNameQuery(q);
+    // A query containing ':' is treated as raw Datafiniti syntax and passed
+    // through unfiltered - that is the probe/debug path. Anything a shopper
+    // types is phrase-matched and pinned to the category.
+    const dfQuery = q.includes(':') ? q : datafiniti.buildSearchQuery(q);
+    if (!dfQuery) return { mode: 'live', cached: false, credits: 0, items: [] };
     const key = Store.hashKey(['search', dfQuery, datafiniti.config().maxRecords]);
 
     const result = await cached(key, async () => {
@@ -159,7 +163,16 @@ export function createPriceService({ cacheTtlMs = 24 * 3600 * 1000, dataDir = nu
     return { product, credits: result.credits, cached: result.cached };
   }
 
-  return { mode, credits, search, lookupUpc, offerMaxAgeDays, demoCatalog: demo.catalog };
+  return {
+    mode,
+    credits,
+    search,
+    lookupUpc,
+    offerMaxAgeDays,
+    // Kept on the service so api.js still never mentions Datafiniti directly.
+    searchCategory: () => (mode() === 'demo' ? 'Demo catalogue' : datafiniti.searchCategory()),
+    demoCatalog: demo.catalog,
+  };
 }
 
 /**
