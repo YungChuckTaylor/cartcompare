@@ -47,10 +47,6 @@ function warningsFor(mode, items, region) {
     });
   }
   if (mode === 'live') {
-    notes.push({
-      level: 'warn',
-      text: 'Live Datafiniti data: scraped online listing prices, not in-store shelf prices. Verify before displaying to anyone.',
-    });
     const noOffers = items.filter((i) => !i.offers.length).length;
     if (noOffers) {
       notes.push({
