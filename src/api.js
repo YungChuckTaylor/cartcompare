@@ -7,6 +7,7 @@ import {
   withinAge,
   cheapestPerMerchant,
   merchantComparison,
+  dedupeProducts,
   merchantBaskets,
   summary,
   normalizeRegion,
@@ -174,20 +175,24 @@ export async function handleRequest({ method = 'GET', pathname, query = {}, body
       })
       // A product nobody sells at a US price cannot be compared, so it is not a
       // result. Counted, though, so the emptiness is explainable.
-      .filter((item) => item.merchantCount > 0)
-      .sort((a, b) => b.merchantCount - a.merchantCount || a.lowPrice - b.lowPrice);
+      .filter((item) => item.merchantCount > 0);
+
+    const deduped = dedupeProducts(items);
+    for (const item of deduped) Object.assign(item, merchantComparison(item.offers));
+    deduped.sort((a, b) => b.merchantCount - a.merchantCount || a.lowPrice - b.lowPrice);
 
     return {
       status: 200,
       body: {
         ...result,
-        items,
+        items: deduped,
         market: MARKET,
         category: prices.searchCategory(),
         uncomparable: Math.max(0, (result.items || []).length - items.length),
+        duplicates: items.length - deduped.length,
         // When even the best match is sold by one retailer there is no ladder to
         // draw. Say it once, at the top, instead of on every card.
-        singleMerchantOnly: items.length > 0 && items.every((item) => item.merchantCount < 2),
+        singleMerchantOnly: deduped.length > 0 && deduped.every((item) => item.merchantCount < 2),
       },
     };
   }

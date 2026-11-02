@@ -89,6 +89,56 @@ export function merchantComparison(offers) {
   };
 }
 
+function nameKey(name) {
+  return String(name || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+/**
+ * The same product comes back more than once: once keyed by barcode, once with
+ * `upc: null`, sometimes both, and the price can differ by 5x because one record
+ * is a multipack. Showing two cards that appear identical at $8.76 and $47.30
+ * reads as a bug to anyone looking at it.
+ *
+ * So: collapse by barcode when there is one, otherwise by name, and union the
+ * offers. The union is for the merchant ladder only - cheapestPerMerchant()
+ * still takes the lowest price per seller.
+ */
+export function dedupeProducts(items) {
+  const out = [];
+  const byUpc = new Map();
+  const byName = new Map();
+
+  for (const item of items) {
+    const name = nameKey(item.name);
+    const hit = item.upc ? byUpc.get(item.upc) : null;
+    const idx = hit !== undefined && hit !== null ? hit : byName.get(name);
+
+    if (idx === undefined) {
+      const at = out.push({ ...item, offers: [...item.offers] }) - 1;
+      if (item.upc) byUpc.set(item.upc, at);
+      if (name) byName.set(name, at);
+      continue;
+    }
+
+    const target = out[idx];
+    const seen = new Set(target.offers.map((o) => `${o.merchant}|${o.price}|${o.url}`));
+    for (const offer of item.offers) {
+      const key = `${offer.merchant}|${offer.price}|${offer.url}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        target.offers.push(offer);
+      }
+    }
+    target.offersDroppedStale += item.offersDroppedStale;
+    if (item.upc) byUpc.set(item.upc, idx);
+  }
+
+  return out;
+}
+
 /**
  * Turn per-item offer lists into per-merchant basket totals.
  *
