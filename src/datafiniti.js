@@ -193,6 +193,20 @@ export function buildNameQuery(name) {
  *
  * Override with SEARCH_CATEGORY if you want to widen or change it.
  */
+/**
+ * Search asks for more records than a single-cart lookup does.
+ *
+ * A Datafiniti product record usually carries offers from ONE retailer's crawl,
+ * so a query that returns the first five matches can easily produce five
+ * single-merchant products and nothing to compare. Ten records is the API
+ * ceiling for a non-download search and it is what makes a merchant ladder
+ * likely to appear at all. Costs 10 credits on a cache miss, hence the cache.
+ */
+export function searchRecords() {
+  const n = Number(process.env.SEARCH_RECORDS ?? 10);
+  return Math.max(1, Math.min(Number.isFinite(n) ? n : 10, MAX_RECORDS));
+}
+
 export function searchCategory() {
   return (process.env.SEARCH_CATEGORY || 'Grocery & Gourmet Food').trim();
 }

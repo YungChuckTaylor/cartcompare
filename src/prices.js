@@ -92,11 +92,12 @@ export function createPriceService({ cacheTtlMs = 24 * 3600 * 1000, dataDir = nu
     // types is phrase-matched and pinned to the category.
     const dfQuery = q.includes(':') ? q : datafiniti.buildSearchQuery(q);
     if (!dfQuery) return { mode: 'live', cached: false, credits: 0, items: [] };
-    const key = Store.hashKey(['search', dfQuery, datafiniti.config().maxRecords]);
+    const records = datafiniti.searchRecords();
+    const key = Store.hashKey(['search', dfQuery, records]);
 
     const result = await cached(key, async () => {
-      assertBudget(1);
-      const res = await datafiniti.search(dfQuery, { numRecords: datafiniti.config().maxRecords });
+      assertBudget(records);
+      const res = await datafiniti.search(dfQuery, { numRecords: records });
       store.recordSpend({ purpose: `search: ${dfQuery}`, credits: res.credits });
       return {
         credits: res.credits,
@@ -171,6 +172,7 @@ export function createPriceService({ cacheTtlMs = 24 * 3600 * 1000, dataDir = nu
     offerMaxAgeDays,
     // Kept on the service so api.js still never mentions Datafiniti directly.
     searchCategory: () => (mode() === 'demo' ? 'Demo catalogue' : datafiniti.searchCategory()),
+    searchRecords: () => (mode() === 'demo' ? 0 : datafiniti.searchRecords()),
     demoCatalog: demo.catalog,
   };
 }

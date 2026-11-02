@@ -161,7 +161,9 @@ function renderSuggestions(items, meta = {}) {
   els.suggestions.innerHTML = '';
 
   if (meta.category) {
-    els.scope.innerHTML = `Price comparison across merchants · <b>${esc(meta.category)}</b>`;
+    els.scope.innerHTML = meta.singleMerchantOnly
+      ? `<span class="warn">No product in this result is sold by more than one merchant</span> · <b>${esc(meta.category)}</b>`
+      : `Price comparison across merchants · <b>${esc(meta.category)}</b>`;
   }
 
   for (const item of items) {
@@ -189,9 +191,10 @@ function renderSuggestions(items, meta = {}) {
     const one = merchants.length === 1;
 
     const foot = one
-      ? '<span class="warn">Only one merchant carries this — nothing to compare</span>'
+      ? `<span class="single">1 merchant</span>
+         <span class="rng">${money(item.lowPrice, item.currency)}</span>`
       : `<span><b>${merchants.length}</b> merchants</span>
-         <span class="rng">${money(item.lowPrice, item.currency)}–${money(item.highPrice, item.currency)}</span>`;
+         <span class="rng">${money(item.lowPrice, item.currency)}–${money(item.highPrice, item.currency)} · save ${money(item.spread, item.currency)}</span>`;
 
     btn.innerHTML = `
       <span class="res-h">

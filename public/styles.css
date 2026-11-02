@@ -138,6 +138,8 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px}
 .res-foot b{color:var(--mid)}
 .res-foot .rng{font-variant-numeric:tabular-nums; color:var(--mid); font-weight:600}
 .res-foot .warn{color:var(--amber); font-weight:600}
+.res-foot .single{color:var(--soft)}
+.scope .warn{color:var(--amber); font-weight:600}
 .res-foot .seen{flex:0 0 auto}
 
 .sugg-note{

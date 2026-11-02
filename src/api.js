@@ -185,6 +185,9 @@ export async function handleRequest({ method = 'GET', pathname, query = {}, body
         market: MARKET,
         category: prices.searchCategory(),
         uncomparable: Math.max(0, (result.items || []).length - items.length),
+        // When even the best match is sold by one retailer there is no ladder to
+        // draw. Say it once, at the top, instead of on every card.
+        singleMerchantOnly: items.length > 0 && items.every((item) => item.merchantCount < 2),
       },
     };
   }
