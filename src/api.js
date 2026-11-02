@@ -158,7 +158,23 @@ export async function handleRequest({ method = 'GET', pathname, query = {}, body
   }
 
   if (route === '/api/compare') {
-    if (method !== 'POST') return { status: 405, body: { error: 'Use POST' } };
+    if (method !== 'POST') {
+      // Read-only form of the same call, for verification and for anything that
+      // cannot POST. It spends credits, so it is off unless explicitly enabled:
+      // an open GET would let a crawler burn the trial balance via URLs.
+      if (process.env.ALLOW_GET_COMPARE === '1') {
+        const items = String(query.items || '')
+          .split(',')
+          .map((chunk) => chunk.trim())
+          .filter(Boolean)
+          .map((chunk) => {
+            const [id, qty] = chunk.split(':');
+            return { id, qty: Number(qty) || 1 };
+          });
+        return buildComparison(prices, { items, region: query.region });
+      }
+      return { status: 405, body: { error: 'Use POST' } };
+    }
     return buildComparison(prices, body);
   }
 
