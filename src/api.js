@@ -150,7 +150,18 @@ export async function handleRequest({ method = 'GET', pathname, query = {}, body
 
   if (route === '/api/search') {
     const result = await prices.search(query.q || '');
-    return { status: 200, body: { ...result, market: MARKET } };
+    // The suggestion list shows one headline price per product. If that price
+    // were a 2017 observation, or a GBP offer on a US screen, the list would
+    // contradict the cart view - so search obeys the same two gates. Products
+    // left with no offer are kept (they are a coverage answer) but sorted last.
+    const items = (result.items || [])
+      .map((item) => {
+        const regional = filterOffers(item.offers || [], MARKET);
+        const offers = withinAge(regional, prices.offerMaxAgeDays);
+        return { ...item, offers, offersDroppedStale: regional.length - offers.length };
+      })
+      .sort((a, b) => Number(b.offers.length > 0) - Number(a.offers.length > 0));
+    return { status: 200, body: { ...result, items, market: MARKET } };
   }
 
   if (route === '/api/catalog') {

@@ -111,8 +111,25 @@ assigned `cartcompare-seven.vercel.app`.
   single app and used `public/app.js` as the root lambda entrypoint, so every route
   including `/` returned `FUNCTION_INVOCATION_FAILED`. The explicit config keeps
   `public/` static and gives `api/[...path].js` its own function.
-- Environment: add `DATAFINITI_API_KEY` in project settings to switch to live mode. With no key the
-  deployment serves the demo catalogue, which is the intended default for a public link.
+- Environment: `DATAFINITI_API_KEY` switches the deployment to live mode. It is set in project settings
+  (encrypted, production only) and is **not** in git; without it the deployment falls back to the demo
+  catalogue. Tuning vars: `DATAFINITI_MAX_RECORDS_PER_CALL` (5), `CREDIT_BUDGET` (200),
+  `CACHE_TTL_HOURS` (24), `OFFER_MAX_AGE_DAYS` (180), and `ALLOW_GET_COMPARE` (off — the GET form of
+  `/api/compare` spends credits, so it is disabled unless set to `1`).
+
+## Live mode: what the real API does to this app
+
+The deployment currently runs on **live Datafiniti data**. Measured numbers, the messy shapes in the
+corpus, and the fixes they forced are in [`docs/live-api-findings.md`](docs/live-api-findings.md).
+Short version: the corpus is ~423M USD-priced records and ~2.3M in Grocery, but it is a *history* of
+observations, not a live feed, and barcode recall is per-SKU (a top-selling cereal returned zero rows
+while a single-serve snack returned one). Three rules follow, and they apply to the search list as well
+as the cart:
+
+1. Offers older than `OFFER_MAX_AGE_DAYS` are dropped before any maths. `dateSeen` is an array of
+   observations; each offer keeps its freshest.
+2. Non-USD offers are excluded from a US comparison.
+3. A cart line with no price is shown as missing, and the basket is not ranked.
 
 Serverless notes: the filesystem is read-only, so `src/store.js` degrades the cache and credit ledger to
 per-instance memory. The cache is an optimisation and the ledger is an estimate — neither is a source of
