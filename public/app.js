@@ -17,7 +17,7 @@ const els = {
   suggestions: $('suggestions'),
   cart: $('cart'),
   cartCount: $('cart-count'),
-  caOnly: $('ca-only'),
+  regionUS: $('region-us'),
   strict: $('strict'),
   clear: $('clear'),
   summary: $('summary'),
@@ -28,9 +28,9 @@ const els = {
 
 /* ---------- formatting ---------- */
 const moneyFmt = {};
-function money(amount, currency = 'CAD') {
+function money(amount, currency = 'USD') {
   if (amount == null || Number.isNaN(amount)) return '—';
-  const cur = String(currency || 'CAD').toUpperCase();
+  const cur = String(currency || 'USD').toUpperCase();
   if (!moneyFmt[cur]) {
     moneyFmt[cur] = new Intl.NumberFormat('en-CA', {
       style: 'currency',
@@ -227,7 +227,7 @@ async function refresh() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         items: [...state.cart.values()].map((l) => ({ upc: l.upc, qty: l.qty, name: l.name })),
-        region: els.caOnly.checked ? 'CA' : 'ANY',
+        region: els.regionUS.checked ? 'US' : 'ANY',
       }),
     });
     state.comparison = body;
@@ -392,7 +392,7 @@ function renderMatrix() {
     const t = totals.get(m);
     if (!t.count) return '<td class="cell none">—</td>';
     const covered = data.items.filter((i) => priceMap(i.offers).has(m)).length;
-    return `<td>${money(t.sum, currencyOf.get(m) || 'CAD')}<br><small style="color:var(--soft);font-weight:600">${covered}/${data.items.length} items</small></td>`;
+    return `<td>${money(t.sum, currencyOf.get(m) || 'USD')}<br><small style="color:var(--soft);font-weight:600">${covered}/${data.items.length} items</small></td>`;
   });
 
   els.matrix.innerHTML = `${head.join('')}<tbody>${rows.join('')}
@@ -407,7 +407,7 @@ els.q.addEventListener('keydown', (event) => {
     els.suggestions.querySelector('.sugg')?.click();
   }
 });
-els.caOnly.addEventListener('change', refresh);
+els.regionUS.addEventListener('change', refresh);
 els.strict.addEventListener('change', () => {
   if (!state.comparison) return;
   renderSummary(state.comparison);

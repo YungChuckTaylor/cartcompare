@@ -1,23 +1,23 @@
 #!/usr/bin/env node
 /**
- * Coverage probe — the only sensible way to spend a 1,000-record trial.
+ * Coverage probe (US market) — the only sensible way to spend a 1,000-record trial.
  *
  * The point is not to build a catalogue. It is to answer one question in an
  * afternoon, for a few dozen credits:
  *
- *     Does Datafiniti actually hold Canadian prices for the products
- *     in my cart-compare product?
+ *     Does Datafiniti actually hold US prices for the products in my cart,
+ *     at enough merchants to compare a basket?
  *
  * How it stays cheap:
  *   - num_records: 1   → 1 credit per probe (a returned record costs 1 credit)
  *   - num_found        → free, and it is the number we actually care about
- *   So 25 probes ≈ 25 credits out of 1,000, and you get a real coverage read.
+ *   So 9 probes ≈ 9 credits out of 1,000, and you get a real coverage read.
  *
  * Usage:
  *   npm run probe:dry     print the probes and the cost, call nothing
  *   npm run probe         run them (requires DATAFINITI_API_KEY)
  *   node scripts/probe-coverage.js --limit=5
- *   node scripts/probe-coverage.js --query='prices.currency:CAD AND categories:"Grocery"'
+ *   node scripts/probe-coverage.js --query='prices.currency:USD AND categories:"Grocery"'
  */
 
 import fs from 'node:fs';
@@ -41,52 +41,58 @@ const EXTRA_QUERY = flag('query');
  */
 const DEFAULT_PROBES = [
   {
-    id: 'any-ca',
-    question: 'Does the product database hold ANY Canadian-sourced record?',
-    query: 'country:CA',
-    decides: 'If this is tiny, everything below is academic.',
+    id: 'any-us',
+    question: 'Does the product database hold US-sourced records?',
+    query: 'country:US',
+    decides: 'The baseline. Datafiniti is US-first, so this should be large.',
   },
   {
-    id: 'cad-prices',
-    question: 'Are there any records with a CAD price at all?',
-    query: 'prices.currency:CAD',
-    decides: 'No CAD prices = no Canadian price product, full stop.',
+    id: 'usd-prices',
+    question: 'Are there records with a USD price attached?',
+    query: 'prices.currency:USD',
+    decides: 'No USD prices = no US price product, full stop.',
   },
   {
-    id: 'ca-grocery',
-    question: 'Is there Canadian grocery?',
-    query: 'country:CA AND categories:"Grocery"',
-    decides: 'The category you actually want. Expect this to be near zero.',
+    id: 'us-grocery',
+    question: 'Is there US grocery at all?',
+    query: 'country:US AND categories:"Grocery"',
+    decides: 'The category your cart wants. Everything below refines this.',
   },
   {
-    id: 'ca-fresh',
-    question: 'How fresh are the Canadian records?',
-    query: 'country:CA AND prices.dateSeen:[2026-10-01 TO 2026-11-02]',
-    decides: 'Stale scraper output cannot power a "what does this cost today" answer.',
+    id: 'fresh',
+    question: 'How fresh are US records? (last 30 days)',
+    query: 'country:US AND prices.dateSeen:[2026-10-03 TO 2026-11-02]',
+    decides: 'Stale scraper output cannot answer "what does this cost today".',
   },
   {
-    id: 'ca-cad-grocery',
-    question: 'Canadian grocery WITH a CAD price — the real intersection?',
-    query: 'country:CA AND prices.currency:CAD AND categories:"Grocery"',
-    decides: 'This is the number that decides whether Datafiniti can seed a cart MVP.',
+    id: 'us-grocery-priced',
+    question: 'US grocery WITH a USD price — the real intersection?',
+    query: 'country:US AND prices.currency:USD AND categories:"Grocery"',
+    decides: 'This is the number that decides whether Datafiniti can seed a US cart MVP.',
   },
   {
-    id: 'ca-electronics',
-    question: 'Is the Canadian electronics slice usable instead?',
-    query: 'country:CA AND categories:"Electronics"',
-    decides: 'If grocery fails and electronics works, the MVP category is electronics.',
-  },
-  {
-    id: 'ca-household',
-    question: 'Canadian household / general merchandise?',
-    query: 'country:CA AND categories:"Household"',
+    id: 'us-household',
+    question: 'US household / general merchandise?',
+    query: 'country:US AND categories:"Household"',
     decides: 'Household is the other half of a typical grocery cart.',
   },
   {
-    id: 'ca-banner-merchants',
-    question: 'Are the big Canadian banners even in the merchant list?',
-    query: 'country:CA AND (merchants.name:"Walmart" OR merchants.name:"Loblaws" OR merchants.name:"Metro")',
+    id: 'us-banners',
+    question: 'Are the big US banners even in the merchant list?',
+    query: 'country:US AND (merchants.name:"Walmart" OR merchants.name:"Target" OR merchants.name:"Kroger")',
     decides: 'A cart comparison is worthless if the merchant column is empty.',
+  },
+  {
+    id: 'us-multi-merchant',
+    question: 'Do records carry MORE THAN ONE merchant with a price?',
+    query: 'country:US AND prices.currency:USD AND prices.amountMin:[1 TO 500]',
+    decides: 'Basket comparison needs the same UPC at several stores, not one listing.',
+  },
+  {
+    id: 'us-electronics',
+    question: 'Is the US electronics slice dense?',
+    query: 'country:US AND categories:"Electronics"',
+    decides: 'Electronics is where scraped catalogues are strongest — a viable fallback category.',
   },
 ];
 
@@ -96,7 +102,7 @@ function upcProbe(upc) {
     id: `upc-${upc}`,
     question: `Does it know barcode ${upc}?`,
     query: datafiniti.buildUpcQuery(upc),
-    decides: 'This is the literal lookup your cart does. Run it on 5–10 of your real SKUs.',
+    decides: 'This is the literal lookup your cart does. Run it on 10 of your real SKUs.',
   };
 }
 
@@ -112,11 +118,7 @@ async function runProbe(probe) {
       credits: res.credits,
       ms: Date.now() - started,
       sample: sample
-        ? {
-            name: sample.name,
-            brand: sample.brand,
-            offers: sample.offers.slice(0, 3),
-          }
+        ? { name: sample.name, brand: sample.brand, offers: sample.offers.slice(0, 3) }
         : null,
     };
   } catch (error) {
@@ -132,8 +134,9 @@ function printResults(results) {
       console.log(`✗ ${r.question.padEnd(width)}  ERROR  ${r.error}`);
       continue;
     }
-    const mark = r.numFound === 0 ? '✗' : r.numFound < 50 ? '~' : '✓';
-    console.log(`${mark} ${r.question.padEnd(width)}  ${String(r.numFound).padStart(9)}  (${r.credits} credit${r.credits === 1 ? '' : 's'})`);
+    const mark = r.numFound === 0 ? '✗' : r.numFound < 100 ? '~' : '✓';
+    const credits = `${r.credits} credit${r.credits === 1 ? '' : 's'}`;
+    console.log(`${mark} ${r.question.padEnd(width)}  ${String(r.numFound).padStart(9)}  (${credits})`);
     if (r.sample) {
       const first = r.sample.offers[0];
       const price = first ? `${first.currency} ${first.price} @ ${first.merchant}` : 'no price on sample';
@@ -144,26 +147,26 @@ function printResults(results) {
 
 function verdict(results) {
   const by = Object.fromEntries(results.map((r) => [r.id, r]));
-  const cad = by['cad-prices']?.numFound ?? 0;
-  const caGrocery = by['ca-cad-grocery']?.numFound ?? 0;
-  const caElectronics = by['ca-electronics']?.numFound ?? 0;
+  const usd = by['usd-prices']?.numFound ?? 0;
+  const grocery = by['us-grocery-priced']?.numFound ?? 0;
+  const electronics = by['us-electronics']?.numFound ?? 0;
 
-  const lines = [];
-  lines.push('');
-  lines.push('VERDICT');
-  lines.push('-------');
-  if (cad === 0) {
-    lines.push('No CAD-priced records at all. Datafiniti cannot supply this product. Stop here.');
-  } else if (caGrocery >= 500) {
-    lines.push(`Canadian grocery with CAD pricing exists (${caGrocery} matching records). It may be viable as a seed layer — check freshness and merchant spread before believing it.`);
-  } else if (caGrocery > 0) {
-    lines.push(`Canadian grocery is present but thin (${caGrocery} records). Enough for a demo, not for coverage. Treat Datafiniti as a US reference layer.`);
+  const lines = ['', 'VERDICT', '-------'];
+  if (usd === 0) {
+    lines.push('No USD-priced records at all. Datafiniti cannot supply this product. Stop here.');
+  } else if (grocery >= 1000) {
+    lines.push(`US grocery with USD pricing is substantial (${grocery} matching records). Viable as a seed layer — but verify per-item merchant spread before trusting basket comparison.`);
+  } else if (grocery > 0) {
+    lines.push(`US grocery is present but thin (${grocery} records). Enough for a demo, not for coverage. Treat grocery as a later phase.`);
   } else {
-    lines.push('Zero Canadian grocery with CAD pricing. Datafiniti cannot seed a Canadian grocery cart MVP, whatever the pricing page implies.');
-    if (caElectronics > 100) {
-      lines.push(`Canadian electronics does exist (${caElectronics}). If you must use Datafiniti, build the MVP in electronics, not grocery.`);
-    }
+    lines.push('Zero US grocery with USD pricing. Datafiniti cannot seed a US grocery cart MVP.');
   }
+  if (electronics >= 1000) {
+    lines.push(`US electronics is dense (${electronics}). This is the category to launch the cart MVP in — scraped catalogues are strongest exactly here.`);
+  }
+  lines.push('');
+  lines.push('Next step: run a UPC probe on 10 of your own SKUs (--query or edit the list).');
+  lines.push('Per-item coverage raised to the power of your cart size is the number that matters.');
   return lines.join('\n');
 }
 
@@ -175,14 +178,12 @@ async function main() {
   if (LIMIT) probes = probes.slice(0, LIMIT);
 
   console.log('');
-  console.log('Datafiniti coverage probe');
-  console.log(`  probes      : ${probes.length}`);
-  console.log(`  max credits : ${probes.length} (one record per probe)`);
-  console.log(`  endpoint    : POST https://api.datafiniti.co/v4/products/search`);
+  console.log('Datafiniti coverage probe — US market');
+  console.log(`  probes       : ${probes.length}`);
+  console.log(`  max credits  : ${probes.length} (one record per probe)`);
+  console.log(`  endpoint     : POST https://api.datafiniti.co/v4/products/search`);
   console.log(`  barcode field: ${datafiniti.config().upcField}`);
-  if (!datafiniti.hasCredentials()) {
-    console.log('  auth        : NO KEY — dry run only');
-  }
+  console.log(`  auth         : ${datafiniti.hasCredentials() ? 'key present' : 'NO KEY — dry run only'}`);
 
   if (DRY || !datafiniti.hasCredentials()) {
     console.log('');
@@ -205,8 +206,7 @@ async function main() {
     const result = await runProbe(probe);
     console.log(result.ok ? `${result.numFound} found` : 'error');
     results.push(result);
-    // Be polite and avoid anything that looks like hammering.
-    await new Promise((r) => setTimeout(r, 400));
+    await new Promise((r) => setTimeout(r, 400)); // be a polite API citizen
   }
 
   printResults(results);
@@ -216,10 +216,7 @@ async function main() {
 
   const out = path.join(ROOT, 'data', 'coverage-report.json');
   fs.mkdirSync(path.dirname(out), { recursive: true });
-  fs.writeFileSync(
-    out,
-    JSON.stringify({ ranAt: new Date().toISOString(), spent, results }, null, 2),
-  );
+  fs.writeFileSync(out, JSON.stringify({ ranAt: new Date().toISOString(), spent, results }, null, 2));
   console.log(`\nWritten to ${path.relative(ROOT, out)}`);
 }
 

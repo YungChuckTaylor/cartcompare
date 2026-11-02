@@ -4,18 +4,33 @@
  */
 
 /**
- * Region filter. In 'CA' mode we keep an offer only when we have positive
- * evidence it is Canadian. Unknown-everything offers are kept, because
- * dropping them would hide exactly the coverage gap we are trying to measure.
+ * Region rules. Default market is the US.
+ *
+ * An offer is kept only when we have positive evidence it belongs to the
+ * region. Offers with no evidence at all are kept, because dropping them
+ * would hide exactly the coverage gap we are trying to measure.
  */
+export const REGIONS = {
+  US: { currency: 'USD', country: 'US', label: 'United States' },
+  CA: { currency: 'CAD', country: 'CA', label: 'Canada' },
+};
+
+export const DEFAULT_REGION = 'US';
+
+export function normalizeRegion(region) {
+  const key = String(region || DEFAULT_REGION).toUpperCase();
+  return key === 'ANY' || REGIONS[key] ? key : DEFAULT_REGION;
+}
+
 export function filterOffers(offers, region) {
-  if (!region || region === 'ANY') return offers;
-  if (region !== 'CA') return offers;
+  const key = normalizeRegion(region);
+  if (key === 'ANY') return offers;
+  const rule = REGIONS[key];
   return offers.filter((o) => {
     const currency = o.currency ? String(o.currency).toUpperCase() : null;
     const country = o.country ? String(o.country).toUpperCase() : null;
-    if (currency && currency !== 'CAD') return false;
-    if (country && country !== 'CA') return false;
+    if (currency && currency !== rule.currency) return false;
+    if (country && country !== rule.country) return false;
     return true;
   });
 }
@@ -54,7 +69,7 @@ export function merchantBaskets(items) {
         baskets.set(key, {
           merchant: key,
           domain: offer.domain || null,
-          currency: offer.currency || 'CAD',
+          currency: offer.currency || 'USD',
           total: 0,
           lines: [],
           covered: 0,
@@ -106,6 +121,6 @@ export function summary(items, baskets) {
     bestMerchant: best ? best.merchant : null,
     worstTotal: worst ? worst.total : null,
     savings: best && worst ? Math.round((worst.total - best.total) * 100) / 100 : null,
-    currency: baskets[0]?.currency || 'CAD',
+    currency: baskets[0]?.currency || 'USD',
   };
 }

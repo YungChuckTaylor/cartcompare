@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CartCompare — cart-level price comparison MVP</title>
+<title>CartCompare — US cart-level price comparison</title>
 <link rel="stylesheet" href="/styles.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230f1620'/><text x='16' y='22' font-size='15' font-family='system-ui' font-weight='700' fill='%23fff' text-anchor='middle'>C</text></svg>">
 </head>
@@ -29,12 +29,12 @@
 
   <aside class="panel build">
     <h2><span class="num">1</span> Build a cart</h2>
-    <p class="hint">Add a few lines. The comparison updates on every change.</p>
+    <p class="hint">Add a few lines. The comparison updates on every change. US market.</p>
 
     <div class="search">
       <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>
       <input id="q" type="search" autocomplete="off" spellcheck="false"
-             placeholder="Search — milk, tide, cheerios, anker…">
+             placeholder="Search — milk, cheerios, tide, airpods…">
     </div>
     <ul class="suggestions" id="suggestions"></ul>
 
@@ -47,8 +47,8 @@
 
     <div class="options">
       <label class="opt">
-        <input type="checkbox" id="ca-only" checked>
-        <span>Canadian offers only</span>
+        <input type="checkbox" id="region-us" checked>
+        <span>US offers only</span>
       </label>
       <label class="opt">
         <input type="checkbox" id="strict">

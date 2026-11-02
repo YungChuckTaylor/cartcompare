@@ -1,11 +1,11 @@
 {
   "name": "cartcompare",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Minimal cart-comparison MVP. Datafiniti is one swappable price adapter, not a dependency.",
+  "description": "US cart-comparison MVP. Datafiniti is one swappable price adapter, not a dependency.",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "node src/server.js",

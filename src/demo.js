@@ -1,8 +1,7 @@
-import fs from 'node:fs';
-import path from 'node:path';
+import { demoCatalog } from './demo-catalog.js';
 
 /**
- * Demo provider.
+ * Demo provider — US market.
  *
  * This exists for one reason: the app has to be runnable and demoable with a
  * $0 budget and no API key. It serves a synthetic catalogue so the UI, the
@@ -12,9 +11,8 @@ import path from 'node:path';
  * Every response from here is tagged source: "demo" and the UI shows a banner.
  * Never ship this data as if it were real prices.
  */
-export function createDemoProvider(dataDir) {
-  const file = path.join(dataDir, 'demo-catalog.json');
-  const catalog = JSON.parse(fs.readFileSync(file, 'utf8'));
+export function createDemoProvider() {
+  const catalog = demoCatalog;
 
   return {
     mode: 'demo',

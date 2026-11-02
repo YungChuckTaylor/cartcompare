@@ -3,21 +3,32 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 
 /**
- * Two tiny bits of state, on disk, so a restart does not re-bill you:
+ * Two tiny bits of state, so a restart does not re-bill you:
  *
  *  - a response cache  (re-querying the same barcode inside the TTL is free)
  *  - a credit ledger   (so you can see what the trial has actually cost)
  *
- * Both are JSON files under data/. They are gitignored on purpose.
+ * Locally these are JSON files under data/. On a serverless platform the
+ * filesystem is read-only, so the same class silently degrades to in-memory
+ * state scoped to a warm lambda instance. That is acceptable: the cache is an
+ * optimisation and the ledger is an estimate, never a source of truth.
  */
 export class Store {
   constructor(dir) {
     this.dir = dir;
     this.cacheFile = path.join(dir, 'cache.json');
     this.creditsFile = path.join(dir, 'credits.json');
-    fs.mkdirSync(dir, { recursive: true });
-    this.cache = this.#read(this.cacheFile, {});
-    this.credits = this.#read(this.creditsFile, { spent: 0, calls: 0, history: [] });
+    this.persistent = true;
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+      fs.accessSync(dir, fs.constants.W_OK);
+    } catch {
+      this.persistent = false;
+    }
+    this.cache = this.persistent ? this.#read(this.cacheFile, {}) : {};
+    this.credits = this.persistent
+      ? this.#read(this.creditsFile, { spent: 0, calls: 0, history: [] })
+      : { spent: 0, calls: 0, history: [] };
   }
 
   #read(file, fallback) {
@@ -29,9 +40,15 @@ export class Store {
   }
 
   #write(file, value) {
-    const tmp = `${file}.tmp`;
-    fs.writeFileSync(tmp, JSON.stringify(value));
-    fs.renameSync(tmp, file);
+    if (!this.persistent) return;
+    try {
+      const tmp = `${file}.tmp`;
+      fs.writeFileSync(tmp, JSON.stringify(value));
+      fs.renameSync(tmp, file);
+    } catch {
+      // Freeze/read-only filesystem — keep going in memory.
+      this.persistent = false;
+    }
   }
 
   static hashKey(parts) {

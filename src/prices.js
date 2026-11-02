@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createDemoProvider } from './demo.js';
 import * as datafiniti from './datafiniti.js';
 import { Store } from './store.js';
@@ -14,9 +15,15 @@ import { Store } from './store.js';
  *   2. Credit budget hard stop. Refuses to call once you hit CREDIT_BUDGET.
  *   3. num_records cap. Only ask for as many records as you will display.
  */
-export function createPriceService({ dataDir, cacheTtlMs }) {
-  const store = new Store(path.join(dataDir, 'cache-root'));
-  const demo = createDemoProvider(dataDir);
+const DEFAULT_DATA_DIR = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  'data',
+);
+
+export function createPriceService({ cacheTtlMs = 24 * 3600 * 1000, dataDir = null } = {}) {
+  const store = new Store(path.join(dataDir || process.env.DATA_DIR || DEFAULT_DATA_DIR, 'cache-root'));
+  const demo = createDemoProvider();
 
   function mode() {
     return datafiniti.hasCredentials() ? 'live' : 'demo';
