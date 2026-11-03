@@ -74,34 +74,44 @@ export function createPriceService({ cacheTtlMs = 24 * 3600 * 1000, dataDir = nu
    * Datafiniti syntax (contains a colon), otherwise it is wrapped as a name
    * phrase search. Credits are recorded either way.
    */
-  async function search(query) {
+  async function search(query, { page = 1 } = {}) {
+    const pageNo = Math.max(1, Math.floor(Number(page) || 1));
+
     if (mode() === 'demo') {
       return {
         mode: 'demo',
         cached: false,
         credits: 0,
-        items: demo.search(query).map(demo.asProduct).map(withId),
+        page: pageNo,
+        numFound: pageNo === 1 ? demo.search(query).length : 0,
+        items: pageNo === 1 ? demo.search(query).map(demo.asProduct).map(withId) : [],
       };
     }
 
     const q = String(query || '').trim();
-    if (!q) return { mode: 'live', cached: false, credits: 0, items: [] };
+    if (!q) return { mode: 'live', cached: false, credits: 0, page: pageNo, items: [] };
 
     // A query containing ':' is treated as raw Datafiniti syntax and passed
     // through unfiltered - that is the probe/debug path. Anything a shopper
     // types is phrase-matched and pinned to the category.
     const dfQuery = q.includes(':') ? q : datafiniti.buildSearchQuery(q);
-    if (!dfQuery) return { mode: 'live', cached: false, credits: 0, items: [] };
+    if (!dfQuery) return { mode: 'live', cached: false, credits: 0, page: pageNo, items: [] };
     const records = datafiniti.searchRecords();
-    const key = Store.hashKey(['search', dfQuery, records]);
+    const key = Store.hashKey(['search', dfQuery, records, pageNo]);
 
     const result = await cached(key, async () => {
       assertBudget(records);
-      const res = await datafiniti.search(dfQuery, { numRecords: records });
-      store.recordSpend({ purpose: `search: ${dfQuery}`, credits: res.credits });
+      // Page 1 is the plain search endpoint; deeper pages use the paging
+      // endpoint, because /products/search cannot return more than ten.
+      const res =
+        pageNo === 1
+          ? await datafiniti.search(dfQuery, { numRecords: records })
+          : await datafiniti.paginate(dfQuery, { page: pageNo, numRecords: records });
+      store.recordSpend({ purpose: `search p${pageNo}: ${dfQuery}`, credits: res.credits });
       return {
         credits: res.credits,
         numFound: res.numFound,
+        fetched: res.records.length,
         items: res.records.map(datafiniti.normalizeRecord).map(withId),
       };
     });
@@ -110,7 +120,9 @@ export function createPriceService({ cacheTtlMs = 24 * 3600 * 1000, dataDir = nu
       mode: 'live',
       cached: result.cached,
       credits: result.credits,
+      page: pageNo,
       numFound: result.numFound,
+      fetched: result.fetched,
       items: result.items,
     };
   }
@@ -173,6 +185,7 @@ export function createPriceService({ cacheTtlMs = 24 * 3600 * 1000, dataDir = nu
     // Kept on the service so api.js still never mentions Datafiniti directly.
     searchCategory: () => (mode() === 'demo' ? 'Demo catalogue' : datafiniti.searchCategory()),
     searchRecords: () => (mode() === 'demo' ? 0 : datafiniti.searchRecords()),
+    searchMaxPages: () => datafiniti.searchMaxPages(),
     demoCatalog: demo.catalog,
   };
 }

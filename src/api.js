@@ -151,7 +151,39 @@ export async function handleRequest({ method = 'GET', pathname, query = {}, body
   }
 
   if (route === '/api/search') {
-    const result = await prices.search(query.q || '');
+    const maxPages = prices.searchMaxPages();
+    const requested = Math.floor(Number(query.page) || 1);
+    const page = Math.min(Math.max(1, requested), maxPages);
+
+    // Past the ceiling there is nothing to fetch and nothing to pay for.
+    if (requested > maxPages) {
+      return {
+        status: 200,
+        body: {
+          mode: prices.mode(),
+          cached: false,
+          credits: 0,
+          page: maxPages,
+          maxPages,
+          hasMore: false,
+          items: [],
+          market: MARKET,
+          category: prices.searchCategory(),
+        },
+      };
+    }
+
+    let result;
+    try {
+      result = await prices.search(query.q || '', { page });
+    } catch (err) {
+      // A deep page failing must not look like "no more results" - it is an
+      // error, and the client should say so and stop scrolling.
+      return {
+        status: 502,
+        body: { error: `Search failed: ${err.message}`, page, hasMore: false, items: [] },
+      };
+    }
     // The suggestion list shows one headline price per product. If that price
     // were a 2017 observation, or a GBP offer on a US screen, the list would
     // contradict the cart view - so search obeys the same two gates. Products
@@ -177,11 +209,26 @@ export async function handleRequest({ method = 'GET', pathname, query = {}, body
     for (const item of deduped) Object.assign(item, merchantComparison(item.offers));
     deduped.sort((a, b) => b.merchantCount - a.merchantCount || a.lowPrice - b.lowPrice);
 
+    // One page is only "more to come" if the API actually filled it and the
+    // match count says there is another page after it.
+    const perPage = prices.searchRecords();
+    const fetched = Number(result.fetched ?? 0);
+    const hasMore =
+      result.mode === 'live' &&
+      perPage > 0 &&
+      page < maxPages &&
+      fetched >= perPage &&
+      (result.numFound || 0) > page * perPage;
+
     return {
       status: 200,
       body: {
         ...result,
         items: deduped,
+        page,
+        perPage,
+        maxPages,
+        hasMore,
         market: MARKET,
         category: prices.searchCategory(),
         uncomparable: Math.max(0, (result.items || []).length - items.length),

@@ -142,6 +142,19 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px}
 .scope .warn{color:var(--amber); font-weight:600}
 .res-foot .seen{flex:0 0 auto}
 
+.more-row{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  padding:8px 2px 2px; font-size:10.5px;
+}
+.more-btn{
+  border:1px dashed var(--line); background:#fff; border-radius:7px;
+  padding:5px 11px; font:inherit; font-size:11px; font-weight:650;
+  color:var(--blue); cursor:pointer; flex:0 0 auto;
+}
+.more-btn:hover{background:var(--blue-bg); border-color:#c8dfe9}
+.more-row .muted{color:var(--soft); font-variant-numeric:tabular-nums; text-align:right; flex:1}
+.more-row .err{color:var(--red); font-weight:600; line-height:1.4}
+
 .sugg-note{
   list-style:none; font-size:10.5px; color:var(--soft); padding:8px 2px 0;
   line-height:1.45; border-top:1px dashed var(--line); margin-top:4px;

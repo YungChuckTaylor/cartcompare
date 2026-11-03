@@ -13,7 +13,9 @@
  */
 
 const ENDPOINT = 'https://api.datafiniti.co/v4/products/search';
+const PAGINATE_ENDPOINT = 'https://api.datafiniti.co/v4/product/paginate';
 const MAX_RECORDS = 10; // API ceiling for non-download searches
+const PAGINATE_MAX_LIMIT = 500; // API ceiling per page, but each record is a credit
 
 export function hasCredentials() {
   return Boolean(process.env.DATAFINITI_API_KEY && process.env.DATAFINITI_API_KEY.trim());
@@ -27,22 +29,17 @@ export function config() {
   };
 }
 
-/**
- * Raw search. Returns the HTTP body plus the numbers you need to reason about
- * money: `numFound` is FREE, `credits` is what this call actually cost you.
- */
-export async function search(query, { numRecords = 10, timeoutMs = 25000 } = {}) {
+async function post(url, payload, { timeoutMs = 25000, query = null } = {}) {
   if (!hasCredentials()) {
     throw new Error('DATAFINITI_API_KEY is not set');
   }
-  const records = Math.max(1, Math.min(numRecords, MAX_RECORDS));
-  const res = await fetch(ENDPOINT, {
+  const res = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${process.env.DATAFINITI_API_KEY.trim()}`,
     },
-    body: JSON.stringify({ query, num_records: records, format: 'JSON', download: false }),
+    body: JSON.stringify(payload),
     signal: AbortSignal.timeout(timeoutMs),
   });
 
@@ -64,6 +61,34 @@ export async function search(query, { numRecords = 10, timeoutMs = 25000 } = {})
     credits: body.total_cost ?? 0,
     records: Array.isArray(body.records) ? body.records : [],
   };
+}
+
+/**
+ * Raw search. Returns the HTTP body plus the numbers you need to reason about
+ * money: `numFound` is FREE, `credits` is what this call actually cost you.
+ */
+export async function search(query, { numRecords = 10, timeoutMs = 25000 } = {}) {
+  const records = Math.max(1, Math.min(numRecords, MAX_RECORDS));
+  return post(ENDPOINT, { query, num_records: records, format: 'JSON', download: false }, { timeoutMs, query });
+}
+
+/**
+ * Page N of the same query.
+ *
+ * `/v4/products/search` stops at 10 records, which is why a search felt like it
+ * ended after one screen. Datafiniti exposes a separate paging endpoint for the
+ * rest: POST /v4/product/paginate?page=N&limit=L. `limit` may go to 500, but
+ * every returned record is a credit, so this passes a shopper-sized limit and
+ * lets the caller decide how many pages it can afford.
+ *
+ * Pages are 1-based and `page=1` should tile with what a plain search returns
+ * first; the client de-duplicates across pages in case it does not.
+ */
+export async function paginate(query, { page = 2, numRecords = 10, timeoutMs = 25000 } = {}) {
+  const limit = Math.max(1, Math.min(numRecords, PAGINATE_MAX_LIMIT));
+  const n = Math.max(1, Math.floor(Number(page) || 1));
+  const url = `${PAGINATE_ENDPOINT}?page=${n}&limit=${limit}`;
+  return post(url, { query }, { timeoutMs, query });
 }
 
 function safeHost(url) {
@@ -205,6 +230,18 @@ export function buildNameQuery(name) {
 export function searchRecords() {
   const n = Number(process.env.SEARCH_RECORDS ?? 10);
   return Math.max(1, Math.min(Number.isFinite(n) ? n : 10, MAX_RECORDS));
+}
+
+/**
+ * The hard stop on infinite scroll.
+ *
+ * A grocery query can match tens of thousands of records and every page of ten
+ * costs ten credits. Without a ceiling, one enthusiastic scroll would empty the
+ * trial. Five pages = 50 credits for a full scroll.
+ */
+export function searchMaxPages() {
+  const n = Number(process.env.SEARCH_MAX_PAGES ?? 5);
+  return Math.max(1, Math.min(Number.isFinite(n) ? Math.floor(n) : 5, 20));
 }
 
 export function searchCategory() {

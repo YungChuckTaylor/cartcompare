@@ -138,6 +138,13 @@ no US merchant price are counted as `uncomparable` rather than shown as $0 or a 
 prefixes (<3 characters) never leave the browser, and a query containing `:` is passed to Datafiniti
 raw — that is the probe path, not the shopper path.
 
+Search pages. `/v4/products/search` cannot return more than 10 records, which is why results used to
+end after one screen. `GET /api/search?page=2` goes through `/v4/product/paginate?page=N&limit=L`
+instead, and the client appends pages as the list is scrolled (or on the "Load more" button). Two
+deliberate constraints: scrolling stops at `SEARCH_MAX_PAGES` (default 5, so 50 credits for a full
+scroll), and the next page is only fetched when the API filled the previous one — a short page means
+the end. Cross-page duplicates are dropped by id, since pages can overlap.
+
 Serverless notes: the filesystem is read-only, so `src/store.js` degrades the cache and credit ledger to
 per-instance memory. The cache is an optimisation and the ledger is an estimate — neither is a source of
 truth. For production, move both to a shared store (Vercel KV or Upstash Redis).

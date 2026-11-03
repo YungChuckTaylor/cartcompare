@@ -98,3 +98,35 @@ test('different products are not merged just because they share a word', () => {
   ]);
   assert.equal(out.length, 2);
 });
+
+// Paging: /v4/products/search stops at 10 records, so deeper pages have to go
+// through the paginate endpoint. Pinning the URL prevents a silent regression
+// to "page 2 returns page 1 again".
+test('deeper pages call the paginate endpoint with page and limit', async () => {
+  const realFetch = globalThis.fetch;
+  const seen = [];
+  process.env.DATAFINITI_API_KEY = 'stub';
+  globalThis.fetch = async (url) => {
+    seen.push(String(url));
+    return new Response(JSON.stringify({ num_found: 1, total_cost: 3, records: [] }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+  try {
+    const { paginate } = await import('../src/datafiniti.js');
+    await paginate('name:"milk"', { page: 2, numRecords: 3 });
+    assert.match(seen[0], /\/v4\/product\/paginate\?page=2&limit=3$/);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test('the page ceiling is configurable and sane', async () => {
+  const { searchMaxPages } = await import('../src/datafiniti.js');
+  delete process.env.SEARCH_MAX_PAGES;
+  assert.equal(searchMaxPages(), 5);
+  process.env.SEARCH_MAX_PAGES = '999';
+  assert.equal(searchMaxPages(), 20); // clamped, so a typo cannot uncork the trial
+  delete process.env.SEARCH_MAX_PAGES;
+});

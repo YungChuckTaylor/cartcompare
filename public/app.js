@@ -107,8 +107,35 @@ function clearBanners() {
 }
 
 /* ---------- search ---------- */
+
+const search = {
+  seq: 0,        // bumps on every new query; stale responses are dropped
+  q: '',
+  page: 0,
+  hasMore: false,
+  loading: false,
+  maxPages: 0,
+  total: 0,
+  shown: 0,
+  seen: new Set(),
+};
+
+const MIN_QUERY = 3; // every distinct query is billable on a cache miss
 let searchTimer = null;
-let searchSeq = 0;
+
+function resetResults() {
+  els.suggestions.innerHTML = '';
+  els.suggestions.scrollTop = 0;
+  search.seq += 1;
+  search.q = '';
+  search.page = 0;
+  search.hasMore = false;
+  search.loading = false;
+  search.maxPages = 0;
+  search.total = 0;
+  search.shown = 0;
+  search.seen = new Set();
+}
 
 function onSearchInput() {
   clearTimeout(searchTimer);
@@ -117,27 +144,39 @@ function onSearchInput() {
 
 async function runSearch() {
   const q = els.q.value.trim();
-  const seq = ++searchSeq;
+  resetResults();
+  if (!q || q.length < MIN_QUERY) return;
 
-  // Every distinct query is a billable Datafiniti call on a cache miss. Typing
-  // one letter at a time would burn the trial, so short prefixes never leave
-  // the browser.
-  if (q && q.length < 3) return;
-  if (!q) {
-    renderSuggestions([]);
-    return;
-  }
+  search.q = q;
+  await loadPage(1, search.seq);
+}
+
+async function loadPage(page, seq) {
+  if (search.loading) return;
+  search.loading = true;
+  search.error = null;
+  renderFooter();
 
   try {
-    const result = await api(`/api/search?q=${encodeURIComponent(q)}`);
-    if (seq !== searchSeq) return;
+    const result = await api(
+      `/api/search?q=${encodeURIComponent(search.q)}&page=${encodeURIComponent(page)}`,
+    );
+    if (seq !== search.seq) return;
     state.mode = result.mode;
-    renderSuggestions(result.items || [], result);
+    search.page = result.page ?? page;
+    search.hasMore = Boolean(result.hasMore);
+    search.maxPages = result.maxPages || 0;
+    search.total = result.numFound || search.total;
+    if (page === 1) setScope(result);
+    appendItems(result.items || []);
   } catch (err) {
-    renderSuggestions([]);
-    if (q) {
-      clearBanners();
-      banner('error', `Search failed: ${esc(err.message)}`);
+    if (seq !== search.seq) return;
+    search.hasMore = false;
+    search.error = err.message;
+  } finally {
+    if (seq === search.seq) {
+      search.loading = false;
+      renderFooter();
     }
   }
 }
@@ -151,82 +190,118 @@ function newestDate(offers) {
   return best === null ? null : new Date(best).toISOString();
 }
 
+function setScope(meta) {
+  els.scope.innerHTML = meta.singleMerchantOnly
+    ? `<span class="warn">No product in this page is sold by more than one merchant</span> · <b>${esc(meta.category)}</b>`
+    : `Price comparison across merchants · <b>${esc(meta.category)}</b>`;
+}
+
 /**
  * One search result = one product = one price comparison between merchants.
  * The ladder is built server side (item.merchants), so this only has to render
  * it: cheapest merchant first, the rest behind it, and an honest label when
  * there is only one seller and therefore nothing to compare.
  */
-function renderSuggestions(items, meta = {}) {
-  els.suggestions.innerHTML = '';
+function cardFor(item) {
+  const merchants = item.merchants || [];
+  const shown = merchants.slice(0, 3);
+  const rest = merchants.length - shown.length;
+  const seen = newestDate(item.offers);
 
-  if (meta.category) {
-    els.scope.innerHTML = meta.singleMerchantOnly
-      ? `<span class="warn">No product in this result is sold by more than one merchant</span> · <b>${esc(meta.category)}</b>`
-      : `Price comparison across merchants · <b>${esc(meta.category)}</b>`;
-  }
+  const li = document.createElement('li');
+  const btn = document.createElement('button');
+  btn.className = 'res';
+  btn.type = 'button';
 
+  const chips = shown
+    .map(
+      (m, idx) =>
+        `<span class="mk${idx === 0 ? ' best' : ''}">
+           <em>${esc(m.merchant)}</em>
+           <b>${money(m.price, m.currency)}</b>
+         </span>`,
+    )
+    .join('');
+
+  const more = rest > 0 ? `<span class="mk more">+${rest} more</span>` : '';
+  const one = merchants.length === 1;
+
+  const foot = one
+    ? `<span class="single">1 merchant</span>
+       <span class="rng">${money(item.lowPrice, item.currency)}</span>`
+    : `<span><b>${merchants.length}</b> merchants</span>
+       <span class="rng">${money(item.lowPrice, item.currency)}–${money(item.highPrice, item.currency)} · save ${money(item.spread, item.currency)}</span>`;
+
+  btn.innerHTML = `
+    <span class="res-h">
+      <span class="res-n">${esc(item.name)}</span>
+      <span class="res-add">+ Add</span>
+    </span>
+    <span class="res-sub">${esc([item.brand, item.upc ? item.upc : 'no barcode'].filter(Boolean).join(' · '))}</span>
+    <span class="mks">${chips}${more}</span>
+    <span class="res-foot">
+      ${foot}
+      <span class="seen">${seen ? `seen ${shortDate(seen)}` : ''}</span>
+    </span>`;
+
+  btn.addEventListener('click', () => {
+    state.products.set(item.id || item.upc, item);
+    addToCart(item);
+    els.q.value = '';
+    resetResults();
+    els.q.focus();
+  });
+
+  li.appendChild(btn);
+  return li;
+}
+
+function appendItems(items) {
   for (const item of items) {
-    const merchants = item.merchants || [];
-    const shown = merchants.slice(0, 3);
-    const rest = merchants.length - shown.length;
-    const seen = newestDate(item.offers);
-
-    const li = document.createElement('li');
-    const btn = document.createElement('button');
-    btn.className = 'res';
-    btn.type = 'button';
-
-    const chips = shown
-      .map(
-        (m, idx) =>
-          `<span class="mk${idx === 0 ? ' best' : ''}">
-             <em>${esc(m.merchant)}</em>
-             <b>${money(m.price, m.currency)}</b>
-           </span>`,
-      )
-      .join('');
-
-    const more = rest > 0 ? `<span class="mk more">+${rest} more</span>` : '';
-    const one = merchants.length === 1;
-
-    const foot = one
-      ? `<span class="single">1 merchant</span>
-         <span class="rng">${money(item.lowPrice, item.currency)}</span>`
-      : `<span><b>${merchants.length}</b> merchants</span>
-         <span class="rng">${money(item.lowPrice, item.currency)}–${money(item.highPrice, item.currency)} · save ${money(item.spread, item.currency)}</span>`;
-
-    btn.innerHTML = `
-      <span class="res-h">
-        <span class="res-n">${esc(item.name)}</span>
-        <span class="res-add">+ Add</span>
-      </span>
-      <span class="res-sub">${esc([item.brand, item.upc ? item.upc : 'no barcode'].filter(Boolean).join(' · '))}</span>
-      <span class="mks">${chips}${more}</span>
-      <span class="res-foot">
-        ${foot}
-        <span class="seen">${seen ? `seen ${shortDate(seen)}` : ''}</span>
-      </span>`;
-
-    btn.addEventListener('click', () => {
-      state.products.set(item.id || item.upc, item);
-      addToCart(item);
-      els.q.value = '';
-      renderSuggestions([]);
-      els.q.focus();
-    });
-
-    li.appendChild(btn);
-    els.suggestions.appendChild(li);
-  }
-
-  if (meta.uncomparable) {
-    const note = document.createElement('li');
-    note.className = 'sugg-note';
-    note.textContent = `${meta.uncomparable} more product${meta.uncomparable === 1 ? '' : 's'} matched but had no US merchant price, so there was nothing to compare.`;
-    els.suggestions.appendChild(note);
+    const id = item.id || item.upc || item.name;
+    if (search.seen.has(id)) continue; // pages can overlap; never show a product twice
+    search.seen.add(id);
+    els.suggestions.appendChild(cardFor(item));
+    search.shown += 1;
   }
 }
+
+/** The row under the cards: a load-more button, a spinner, or the end. */
+function renderFooter() {
+  for (const node of els.suggestions.querySelectorAll('.more-row')) node.remove();
+  if (!search.shown && !search.loading) return;
+
+  const li = document.createElement('li');
+  li.className = 'more-row';
+
+  if (search.loading) {
+    li.innerHTML = '<span class="muted">Loading…</span>';
+  } else if (search.error) {
+    li.innerHTML = `<span class="err">${esc(search.error)}</span>`;
+  } else if (search.hasMore) {
+    li.innerHTML = `
+      <button class="more-btn" type="button">Load more</button>
+      <span class="muted">${search.shown} of ${search.total.toLocaleString('en-US')} shown</span>`;
+    li.querySelector('.more-btn').addEventListener('click', () => loadPage(search.page + 1, search.seq));
+  } else if (search.maxPages && search.total > search.shown) {
+    li.innerHTML = `<span class="muted">${search.shown} of ${search.total.toLocaleString('en-US')} shown · stopped at the ${search.maxPages}-page search limit</span>`;
+  } else {
+    li.innerHTML = `<span class="muted">End of results · ${search.shown} shown</span>`;
+  }
+
+  els.suggestions.appendChild(li);
+}
+
+// Scrolling to the bottom of the result list pulls the next page. Deliberately
+// not an IntersectionObserver: a sentinel that is already visible would fire on
+// mount and spend every page's credits without anyone asking.
+els.suggestions.addEventListener('scroll', () => {
+  if (!search.hasMore || search.loading) return;
+  const el = els.suggestions;
+  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 64) {
+    loadPage(search.page + 1, search.seq);
+  }
+});
 
 /* ---------- cart ---------- */
 function addToCart(item) {
